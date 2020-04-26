@@ -33,7 +33,9 @@ class Learner():
                  weight_decay = 0.0,
                  lr = 5e-3,
                  eps = 1e-8,
-                 accumulate_int = 1
+                 accumulate_int = 1,
+                 batch_size = 8,
+                 warmup_pct = 0.0
                  ):
         """
         Object to store learning. Used for fine-tuning.
@@ -55,6 +57,8 @@ class Learner():
         self.lr = lr
         self.eps = eps
         self.accumulate_int = accumulate_int
+        self.batch_size = batch_size
+        self.warmup_pct = warmup_pct
         
         # make directory for recorded weights if doesn't already exist
         self.log_dir = os.path.join(self.save_dir, 'logged')
@@ -70,7 +74,7 @@ class Learner():
             self.model = nn.DataParallel(model)
             self.model.to(self.device)
     
-    def set_optimizer(self):
+    def get_optimizer(self):
         """
         Set optimizer for learner object using model.
         """
@@ -91,13 +95,25 @@ class Learner():
         
         return optimizer
     
+    def pack_input(self,
+                   ):
+        """
+        TO DO:
+        
+        pack input into dictionary
+        """
+        
+        inputs = {}
+        
+        return inputs
+        
+    
     def train_step(self,
-                   batch,
-                   idx,
-                   scheduler,
-                   optimizer,
-                   loss,
-                   accumulated
+                   batch=None,
+                   idx=None,
+                   scheduler=None,
+                   optimizer=None,
+                   accumulated=None
                    ):
         """
         Training for a single batch.
@@ -110,7 +126,7 @@ class Learner():
 #         # TO DO: 
 #         # unpack data and labels from batch and send to device
 # =============================================================================
-        inputs = None
+        inputs = self.pack_input() # TO IMPLEMENT
         
         # zero gradients
         if accumulated == 0:
@@ -177,12 +193,16 @@ class Learner():
 #                 # TO DO:
 #                 # unpack data and labels from batch and send to device
 # =============================================================================
-                inputs = None
+                inputs = self.pack_input() # TO IMPLEMENT
                 
                 out = model(**inputs)
                 
-                # maybe some evaluation metric?
-                cum_loss += out[0].to("CPU").detach()
+                l = out[0]
+                
+                if isinstance(self.model, nn.DataParallel):
+                    l = l.mean()
+                
+                cum_loss += l.detach()
         
         return cum_loss/(i+1)
         
@@ -201,14 +221,15 @@ class Learner():
         """
         # set up learning rate scheduler
         if optimizer is None:
-            optimizer = self.set_optimizer()
+            optimizer = self.get_optimizer()
         
         if scheduler is None:
             scheduler = opt.lr_scheduler.OneCycleLR(optimizer,
                                                     max_lr = self.lr,
                                                     tota_steps=self.max_steps,
                                                     anneal_strategy="linear",
-                                                    cycle_momentum=False)
+                                                    cycle_momentum=False,
+                                                    pct_start=self.warmup_pct)
         
         cum_loss =  0.0
         best_val_loss = float("inf")
@@ -228,12 +249,12 @@ class Learner():
         self.val_dataloader = self.IO.load_dataloader(None)
         
         # set number of epochs based on number of iterations
-        max_epochs = self.max_steps // len(self.train_dataloader) + 1
+        max_epochs = (self.max_steps // (len(self.train_dataloader.dataset)//(self.batch_size*self.accumulate_int))) + 1
         
         log.info("Training with {} iterations ~ {} epochs".format(self.max_steps, max_epochs))
 
         # train
-        global_step = 1
+        global_step = 0
         accumulated = 0
         
         train_iterator = trange(0, int(max_epochs), desc = 'Epoch', mininterval=30)
@@ -245,7 +266,11 @@ class Learner():
             for step, batch in enumerate(epoch_iterator):
                 
                 self.model.train()
-                iter_loss, accumulated = self.train_step(batch, step, scheduler)
+                iter_loss, accumulated = self.train_step(batch=batch,
+                                                         idx=global_step,
+                                                         scheduler=scheduler,
+                                                         optimizer=optimizer,
+                                                         accumulated=accumulated)                
                 cum_loss += iter_loss
                 
                 # check for best every best_int
