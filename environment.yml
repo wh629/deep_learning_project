@@ -1,6 +1,5 @@
 name: DL
 channels:
-  - conda-forge
   - pytorch
 dependencies:
   - python
