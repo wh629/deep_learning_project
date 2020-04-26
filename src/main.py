@@ -1,7 +1,5 @@
 """
 Main run script to execute experiments and analysis
-
-TO DO: Meta-Learning (OML)
 """
 
 import torch
