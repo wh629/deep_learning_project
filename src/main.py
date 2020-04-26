@@ -81,7 +81,8 @@ def main():
                               lr = parser.learning_rate,
                               eps = parser.adam_epsilon,
                               accumulate_int = parser.accumulate_int,
-                              batch_size = parser.batch_size
+                              batch_size = parser.batch_size,
+                              warmup_pct = parser.pct_start
                               )
     results = trainer.train()
     results["Experiment"] = parser.experiment

@@ -61,7 +61,7 @@ args.add_argument('--training_steps',
                   help='number of updates for fine-tuning')
 args.add_argument('--learning_rate', 
                   type=float, 
-                  default=3e-5,
+                  default=1e-4,
                   help='initial learning rate for Adam')
 args.add_argument("--weight_decay",
                   type=float,
@@ -87,6 +87,10 @@ args.add_argument('--verbose_steps',
                   type=int,
                   default=1000,
                   help='Log results ever X update steps')
+args.add_argument('--pct_start',
+                  type=float,
+                  default=0.0,
+                  help='percentage of cycle to warm-up learning rate')
 
 def check_args(parser):
     """

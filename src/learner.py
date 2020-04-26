@@ -35,6 +35,7 @@ class Learner():
                  eps = 1e-8,
                  accumulate_int = 1,
                  batch_size = 8,
+                 warmup_pct = 0.0
                  ):
         """
         Object to store learning. Used for fine-tuning.
@@ -57,6 +58,7 @@ class Learner():
         self.eps = eps
         self.accumulate_int = accumulate_int
         self.batch_size = batch_size
+        self.warmup_pct = warmup_pct
         
         # make directory for recorded weights if doesn't already exist
         self.log_dir = os.path.join(self.save_dir, 'logged')
@@ -226,7 +228,8 @@ class Learner():
                                                     max_lr = self.lr,
                                                     tota_steps=self.max_steps,
                                                     anneal_strategy="linear",
-                                                    cycle_momentum=False)
+                                                    cycle_momentum=False,
+                                                    pct_start=self.warmup_pct)
         
         cum_loss =  0.0
         best_val_loss = float("inf")
