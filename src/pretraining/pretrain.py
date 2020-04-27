@@ -86,10 +86,11 @@ def generate_random_image_mask(channels, height, width):
     return mask
 
 
-def pretrain(batch_size=5):
-    learning_rate = 1e-3
+def pretrain(batch_size=5, permutations_k=64):
+    learning_rate = 1e-4
+    weight_decay = 1e-8
+    max_grad_bound = 1
     num_epochs = 50
-    permutations_k = 64
 
     # pre-training tasks aim to restore the original image order.
     permutations = get_k_random_permutations_over_n_elements(k=permutations_k, n=6)
@@ -123,10 +124,7 @@ def pretrain(batch_size=5):
 
     model = CameraEncoder().to(device)
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(
-        model.parameters(),
-        lr=learning_rate,
-    )
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, eps=weight_decay)
 
     for epoch in range(num_epochs):
         for batch in pre_train_loader:
@@ -150,13 +148,15 @@ def pretrain(batch_size=5):
             loss = criterion(output, answers)
             optimizer.zero_grad()
             loss.backward()
+            nn.utils.clip_grad_norm_(self.model.parameters(), max_grad_bound)
             optimizer.step()
 
         print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, loss.item()))
 
         if epoch % 10 == 0:
             loss_val = loss.item()
-            filename = 'out/pretrain_encoder_by_batchSize_{}_epochs_{}_loss_{}.pt'.format(batch_size, epoch, int(loss_val * 1000))
+            filename = 'out/pretrain_encoder_by_batchSize_{}_numPermutations_{}_epochs_{}_loss_{}.pt'.format(
+                batch_size, permutations_k, epoch, int(loss_val * 1000))
             torch.save({'model': model, 'resnet18': model.resnet, 'optimizer': optimizer.state_dict()}, filename)
 
 
@@ -166,6 +166,10 @@ def get_args():
                       type=int,
                       default=8,
                       help='batch size')
+    args.add_argument('--permutations_k',
+                      type=int,
+                      default=64,
+                      help='number of image permutations in pre-training.')
     return args.parse_args()
 
 
@@ -173,4 +177,4 @@ if __name__ == '__main__':
 
     parser = get_args()
 
-    pretrain(parser.batch_size)
+    pretrain(parser.batch_size, parser.permutations_k)
