@@ -107,7 +107,7 @@ def pretrain(batch_size=5):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
-    image_folder = '../../data'
+    image_folder = '~/project/data'
     pretrain_scene_index = np.arange(106)
 
     transform = torchvision.transforms.ToTensor()
@@ -157,7 +157,7 @@ def pretrain(batch_size=5):
         if epoch % 10 == 0:
             loss_val = loss.item()
             filename = 'out/pretrain_encoder_by_batchSize_{}_epochs_{}_loss_{}.pt'.format(batch_size, epoch, int(loss_val * 1000))
-            torch.save(model.resnet.state_dict(), filename)
+            torch.save({'model': model, 'resnet18': model.resnet, 'optimizer': optimizer.state_dict()}), filename)
 
 
 def get_args():
