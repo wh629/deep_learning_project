@@ -44,7 +44,7 @@ def get_k_random_permutations_over_n_elements(k, n):
 
 
 class CameraEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, permutations_k=64):
         super().__init__()
 
         self.resnet = torchvision.models.resnet18(pretrained=False, progress=False)
@@ -52,8 +52,8 @@ class CameraEncoder(nn.Module):
             nn.Linear(6000, 4096),
             nn.BatchNorm1d(4096),
             nn.ReLU(),
-            nn.Linear(4096, 64),
-            nn.BatchNorm1d(64),
+            nn.Linear(4096, permutations_k),
+            nn.BatchNorm1d(permutations_k),
             nn.ReLU(),
             nn.LogSoftmax(dim=1)
         )
@@ -123,7 +123,7 @@ def pretrain(batch_size=5, permutations_k=64):
                                                    shuffle=True,
                                                    num_workers=2)
 
-    model = CameraEncoder()
+    model = CameraEncoder(permutations_k)
     model.to(device)
 
     criterion = nn.MSELoss()
