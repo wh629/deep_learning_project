@@ -11,6 +11,5 @@
 module load anaconda3/5.3.1
 source activate /home/hp1326/miniconda3/envs/pDL
 
-PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 16 --permutations_k 16
-&& \
-PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 32 --permutations_k 16
+PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 16 --permutations_k 16;
+PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 32 --permutations_k 16;

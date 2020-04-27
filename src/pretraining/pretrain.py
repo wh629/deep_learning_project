@@ -108,7 +108,7 @@ def pretrain(batch_size=5, permutations_k=64):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
-    image_folder = '~/project/data'
+    image_folder = 'data'
     pretrain_scene_index = np.arange(106)
 
     transform = torchvision.transforms.ToTensor()
