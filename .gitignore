@@ -1,1 +1,6 @@
 environment_wh.yml
+
+data/*
+.idea/*
+
+*.pyc
