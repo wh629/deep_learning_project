@@ -9,6 +9,6 @@
 #SBATCH --mail-user=hp1326@nyu.edu
 
 module load anaconda3/5.3.1
-conda activate /home/hp1326/miniconda3/envs/pDL
+source activate /home/hp1326/miniconda3/envs/pDL
 
 PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 16
