@@ -152,7 +152,7 @@ def pretrain(batch_size=5, permutations_k=64):
             loss = criterion(output, answers)
             optimizer.zero_grad()
             loss.backward()
-            nn.utils.clip_grad_norm_(self.model.parameters(), max_grad_bound)
+            nn.utils.clip_grad_norm_(model.parameters(), max_grad_bound)
             optimizer.step()
 
         print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, loss.item()))
