@@ -72,7 +72,7 @@ class CameraEncoder(nn.Module):
         return x
 
 
-def generate_random_image_mask(channels, height, width):
+def generate_random_image_mask(channels, height, width, device):
     p = 0.7
     h = int(p * height)
     w = int(p * width)
@@ -81,6 +81,7 @@ def generate_random_image_mask(channels, height, width):
     random_y = random.randint(0, width - w - 1)
 
     mask = torch.zeros(size=(channels, height, width))
+    mask.to(device)
     mask[:, random_x:random_x + h, random_y:random_y + w] = torch.ones(size=(channels, h, w))
 
     return mask
@@ -122,27 +123,30 @@ def pretrain(batch_size=5, permutations_k=64):
                                                    shuffle=True,
                                                    num_workers=2)
 
-    model = CameraEncoder().to(device)
+    model = CameraEncoder()
+    model.to(device)
+
     criterion = nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, eps=weight_decay)
 
     for epoch in range(num_epochs):
         for batch in pre_train_loader:
+            batch = batch.to(device)
 
             # generate answers
             indices = [random.randint(0, permutations_k - 1) for _ in range(batch_size)]
             answers = torch.zeros(size=(batch_size, permutations_k))
+            answers.to(device)
             for ith, index in enumerate(indices):
                 answers[ith, index] = 1
-            answers.to(device)
 
             # prepare input
             for ith in range(batch_size):
                 batch[ith, list(range(6))] = batch[ith, permutations[indices[ith]]]
-                random_mask = generate_random_image_mask(*batch[0, 0].shape)
+                random_mask = generate_random_image_mask(*batch[0, 0].shape, device)
+                random_mask.to(device)
                 for jth in range(6):
                     batch[ith, jth] *= random_mask
-            batch = batch.to(device)
 
             output = model(batch)
             loss = criterion(output, answers)
