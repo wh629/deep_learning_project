@@ -1,5 +1,6 @@
 import argparse
 import random
+import itertools
 import numpy as np
 
 import torch
@@ -27,39 +28,48 @@ from pretraining.data_helper import UnlabeledDataset
 #     return samples
 
 
-def get_k_random_permutations_over_n_elements(k, n):
+def get_k_permutations_of_n_elements(k, n):
     """
-    Generate k random unique permutations from n elements.
+    Generate k random unique permutations of n elements. These k permutations are better to have long hamming distances.
     """
-    perms = set()
-    original = list(range(n))
+    perms_available = list(itertools.permutations(range(n)))
+    perms_output = [perms_available.pop(random.randint(0, len(perms_available) - 1))]
 
-    while len(perms) < k:
-        random.shuffle(original)
-        new_perm = tuple(original)
-        if new_perm not in perms:
-            perms.add(new_perm)
+    distance_mapping = {}
+    while len(perms_output) < k:
+        dists = []
+        for perm_i in perms_available:
+            dist_i = 0
+            for perm_j in perms_output:
+                if (perm_i, perm_j) in distance_mapping:
+                    dist_i += distance_mapping[(perm_i, perm_j)]
+                else:
+                    dist_ij = sum([e1 != e2 for e1, e2 in zip(perm_i, perm_j)])  # hamming distance
+                    dist_i += dist_ij
+                    distance_mapping[(perm_i, perm_j)] = dist_ij
+                    distance_mapping[(perm_j, perm_i)] = dist_ij
 
-    return list(perms)
+            dists.append(dist_i)
+
+        idx_max = dists.index(max(dists))
+        perms_output.append(perms_available.pop(idx_max))
+
+    return perms_output
 
 
 class CameraEncoder(nn.Module):
-    def __init__(self, permutations_k=64):
+    def __init__(self, permutations_k=8, hidden_size=4096):
         super().__init__()
 
-        self.resnet = torchvision.models.resnet18(pretrained=False, progress=False)
+        self.resnet = torchvision.models.resnet50(pretrained=False, progress=False)
         self.decoder = nn.Sequential(
-            nn.Linear(6000, 4096),
-            nn.BatchNorm1d(4096),
+            nn.Linear(6000, hidden_size),
             nn.ReLU(),
-            nn.Linear(4096, permutations_k),
-            nn.BatchNorm1d(permutations_k),
-            nn.ReLU(),
-            nn.LogSoftmax(dim=1)
+            nn.Linear(hidden_size, permutations_k),
+            nn.ReLU()
         )
 
     def forward(self, x):
-
         # first apply resnet to each of 6 images for all samples in current batch
         xs = [self.resnet(x[:, i]) for i in range(x.shape[1])]
 
@@ -72,7 +82,7 @@ class CameraEncoder(nn.Module):
         return x
 
 
-def generate_random_image_mask(channels, height, width, device):
+def generate_random_image_mask(channels, height, width):
     p = 0.7
     h = int(p * height)
     w = int(p * width)
@@ -81,7 +91,6 @@ def generate_random_image_mask(channels, height, width, device):
     random_y = random.randint(0, width - w - 1)
 
     mask = torch.zeros(size=(channels, height, width))
-    mask.to(device)
     mask[:, random_x:random_x + h, random_y:random_y + w] = torch.ones(size=(channels, h, w))
 
     return mask
@@ -94,7 +103,7 @@ def pretrain(batch_size=5, permutations_k=64):
     num_epochs = 50
 
     # pre-training tasks aim to restore the original image order.
-    permutations = get_k_random_permutations_over_n_elements(k=permutations_k, n=6)
+    permutations = get_k_permutations_of_n_elements(k=permutations_k, n=6)
 
     # Set up your device
     cuda = torch.cuda.is_available()
@@ -123,31 +132,25 @@ def pretrain(batch_size=5, permutations_k=64):
                                                    shuffle=True,
                                                    num_workers=2)
 
-    model = CameraEncoder(permutations_k)
-    model.to(device)
+    model = CameraEncoder(permutations_k).to(device)
 
-    criterion = nn.MSELoss()
+    criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, eps=weight_decay)
 
     for epoch in range(num_epochs):
         for batch in pre_train_loader:
-            batch = batch.to(device)
-
             # generate answers
             indices = [random.randint(0, permutations_k - 1) for _ in range(batch_size)]
-            answers = torch.zeros(size=(batch_size, permutations_k))
-            answers.to(device)
-            for ith, index in enumerate(indices):
-                answers[ith, index] = 1
+            answers = torch.tensor(indices)
 
             # prepare input
             for ith in range(batch_size):
                 batch[ith, list(range(6))] = batch[ith, permutations[indices[ith]]]
-                random_mask = generate_random_image_mask(*batch[0, 0].shape, device)
-                random_mask.to(device)
                 for jth in range(6):
+                    random_mask = generate_random_image_mask(*batch[0, 0].shape)
                     batch[ith, jth] *= random_mask
 
+            batch = batch.to(device)
             output = model(batch)
             loss = criterion(output, answers)
             optimizer.zero_grad()
@@ -161,18 +164,18 @@ def pretrain(batch_size=5, permutations_k=64):
             loss_val = loss.item()
             filename = 'out/pretrain_encoder_by_batchSize_{}_numPermutations_{}_epochs_{}_loss_{}.pt'.format(
                 batch_size, permutations_k, epoch, int(loss_val * 1000))
-            torch.save({'model': model, 'resnet18': model.resnet, 'optimizer': optimizer.state_dict()}, filename)
+            torch.save({'model': model, 'resnet50': model.resnet, 'optimizer': optimizer.state_dict()}, filename)
 
 
 def get_args():
     args = argparse.ArgumentParser(description='Deep Learning Competition')
     args.add_argument('--batch_size',
                       type=int,
-                      default=8,
+                      default=32,
                       help='batch size')
     args.add_argument('--permutations_k',
                       type=int,
-                      default=64,
+                      default=8,
                       help='number of image permutations in pre-training.')
     return args.parse_args()
 
