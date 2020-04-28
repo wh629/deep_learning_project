@@ -6,7 +6,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --mem=32GB
 #SBATCH --gres=gpu:1
-#SBATCH --partition=v100_sxm2_4,p40_4,p100_4,v100_pci_2,k80_4,k80_8
+#SBATCH --partition=v100_sxm2_4,p40_4,p100_4,v100_pci_2,k80_4
 #SBATCH --mail-user=hp1326@nyu.edu
 
 module purge
