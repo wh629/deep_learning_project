@@ -137,11 +137,6 @@ def pretrain(batch_size=5, permutations_k=64):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, eps=weight_decay)
 
-    print(f'sending model to device: {device}')
-    torch.save(model.state_dict(), 'out/untrained_model.pt')
-    torch.save(model.resnet.state_dict(), 'out/untrained_resnet.pt')
-    torch.save(optimizer.state_dict(), 'out/untrained_optimizer.pt')
-
     for epoch in range(num_epochs):
         for batch in pre_train_loader:
             # generate answers
