@@ -13,6 +13,6 @@ module purge
 module load anaconda3/5.3.1
 source activate DL
 
-PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 32 --permutations_k 8;
-PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 32 --permutations_k 16;
-PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 32 --permutations_k 32;
+PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 16 --permutations_k 8;
+PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 16 --permutations_k 16;
+PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 16 --permutations_k 32;

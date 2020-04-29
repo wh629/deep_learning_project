@@ -15,5 +15,5 @@ module load anaconda3/5.3.1
 # module load gcc/6.3.0
 source activate DL
 
-PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 64 --permutations_k 8;
-PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 128 --permutations_k 8;
+PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 8 --permutations_k 8;
+PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 32 --permutations_k 8;
