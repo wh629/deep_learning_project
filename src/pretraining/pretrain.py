@@ -139,11 +139,12 @@ def pretrain(batch_size=5, permutations_k=64):
 
     for epoch in range(num_epochs):
         for batch in pre_train_loader:
+            batch_size_now = batch.shape[0]
             # generate answers
-            answers = torch.randint(permutations_k, (batch_size,)).to(device)
+            answers = torch.randint(permutations_k, (batch_size_now,)).to(device)
 
             # prepare input
-            for ith in range(batch_size):
+            for ith in range(batch_size_now):
                 batch[ith] = batch[ith, permutations[answers[ith].item()]]
                 for jth in range(6):
                     random_mask = generate_random_image_mask(*batch[0, 0].shape)
@@ -185,10 +186,8 @@ def get_args():
 
 
 if __name__ == '__main__':
-    
-    if not torch.cuda.is_available():
-        print('Exit. Not using GPU.')
-        exit(0)
+
+    assert torch.cuda.is_available(), 'Exit. Not using GPU.'
 
     parser = get_args()
 
