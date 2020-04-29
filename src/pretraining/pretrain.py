@@ -61,7 +61,7 @@ class CameraEncoder(nn.Module):
     def __init__(self, permutations_k=8, hidden_size=4096):
         super().__init__()
 
-        self.resnet = torchvision.models.resnet50(pretrained=False, progress=False)
+        self.resnet = torchvision.models.resnet18(pretrained=False, progress=False)
         self.decoder = nn.Sequential(
             nn.Linear(6000, hidden_size),
             nn.ReLU(),
@@ -141,7 +141,7 @@ def pretrain(batch_size=5, permutations_k=64):
         for batch in pre_train_loader:
             # generate answers
             indices = [random.randint(0, permutations_k - 1) for _ in range(batch_size)]
-            answers = torch.tensor(indices)
+            answers = torch.tensor(indices).to(device)
 
             # prepare input
             for ith in range(batch_size):
@@ -165,7 +165,7 @@ def pretrain(batch_size=5, permutations_k=64):
             filename = 'out/pretrain_encoder_by_batchSize_{}_numPermutations_{}_epochs_{}_loss_{}.pt'.format(
                 batch_size, permutations_k, epoch, int(loss_val * 1000))
             torch.save({'model': model.state_dict(),
-                        'resnet50': model.resnet.state_dict(),
+                        'resnet18': model.resnet.state_dict(),
                         'optimizer': optimizer.state_dict()},
                        filename)
 
