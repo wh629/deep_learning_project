@@ -140,12 +140,11 @@ def pretrain(batch_size=5, permutations_k=64):
     for epoch in range(num_epochs):
         for batch in pre_train_loader:
             # generate answers
-            indices = [random.randint(0, permutations_k - 1) for _ in range(batch_size)]
-            answers = torch.tensor(indices).to(device)
+            answers = torch.randint(permutations_k, (batch_size,)).to(device)
 
             # prepare input
             for ith in range(batch_size):
-                batch[ith, list(range(6))] = batch[ith, permutations[indices[ith]]]
+                batch[ith] = batch[ith, permutations[answers[ith].item()]]
                 for jth in range(6):
                     random_mask = generate_random_image_mask(*batch[0, 0].shape)
                     batch[ith, jth] *= random_mask
@@ -164,9 +163,11 @@ def pretrain(batch_size=5, permutations_k=64):
             loss_val = loss.item()
             filename = 'out/pretrain_encoder_by_batchSize_{}_numPermutations_{}_epochs_{}_loss_{}.pt'.format(
                 batch_size, permutations_k, epoch, int(loss_val * 1000))
-            torch.save({'model': model.state_dict(),
-                        'resnet18': model.resnet.state_dict(),
-                        'optimizer': optimizer.state_dict()},
+            torch.save({
+                            'model': model.state_dict(),
+                            'resnet18': model.resnet.state_dict(),
+                            'optimizer': optimizer.state_dict()
+                        },
                        filename)
 
 
@@ -174,7 +175,7 @@ def get_args():
     args = argparse.ArgumentParser(description='Deep Learning Competition')
     args.add_argument('--batch_size',
                       type=int,
-                      default=32,
+                      default=8,
                       help='batch size')
     args.add_argument('--permutations_k',
                       type=int,
