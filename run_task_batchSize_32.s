@@ -11,9 +11,7 @@
 
 module purge
 module load anaconda3/5.3.1
-module load cuda/10.0.130
-module load gcc/6.3.0
-source activate /home/hp1326/miniconda3/envs/pDL
+source activate DL
 
 PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 32 --permutations_k 8;
 PYTHONPATH=./src python src/pretraining/pretrain.py --batch_size 32 --permutations_k 16;

@@ -184,6 +184,10 @@ def get_args():
 
 
 if __name__ == '__main__':
+    
+    if not torch.cuda.is_available():
+	print('Exit. Not using GPU.')
+	exit(0)
 
     parser = get_args()
 
