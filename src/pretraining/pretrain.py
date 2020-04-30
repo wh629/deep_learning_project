@@ -102,6 +102,8 @@ def pretrain(batch_size=5, permutations_k=64):
     max_grad_bound = 1
     num_epochs = 50
 
+    print('Start pre-training, batch_size = {}, permutations_k = {}'.format(batch_size, permutations_k))
+
     # pre-training tasks aim to restore the original image order.
     permutations = get_k_permutations_of_n_elements(k=permutations_k, n=6)
 
@@ -160,16 +162,11 @@ def pretrain(batch_size=5, permutations_k=64):
 
         print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, loss.item()))
 
-        if epoch % 10 == 0:
+        if (epoch + 1) % 10 == 0:
             loss_val = loss.item()
             filename = 'out/pretrain_encoder_by_batchSize_{}_numPermutations_{}_epochs_{}_loss_{}.pt'.format(
-                batch_size, permutations_k, epoch, int(loss_val * 1000))
-            torch.save({
-                            'model': model.state_dict(),
-                            'resnet18': model.resnet.state_dict(),
-                            'optimizer': optimizer.state_dict()
-                        },
-                       filename)
+                batch_size, permutations_k, epoch + 1, int(loss_val * 1000))
+            torch.save(model.state_dict(), filename)
 
 
 def get_args():
