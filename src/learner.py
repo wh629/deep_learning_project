@@ -16,6 +16,8 @@ from tqdm import tqdm, trange
 import logging as log
 import time
 
+import helper
+
 class Learner():
     def __init__(self,
                  access_mode,
@@ -186,6 +188,12 @@ class Learner():
         
         cum_loss = 0
         
+        true_boxes = []
+        true_roads = []
+
+        pred_boxes = []
+        pred_roads = []
+
         # stop gradient tracking
         with torch.no_grad():
             for i, batch in enumerate(self.val_dataloader):
@@ -204,7 +212,15 @@ class Learner():
                 
                 cum_loss += l.detach()
         
-        return cum_loss/(i+1)
+        #TODO: calculate ts road map and ats bounding boxes
+        # might need to loop for road_ts
+        for road_map1, road_map2 in zip(pred_roads, true_roads):
+            road_ts = helper.compute_ts_road_map(road_map1, road_map2)
+
+        for boxes1, boxes2 in zip(pred_boxes, pred_roads):
+            box_ats = helper.compute_ats_bounding_boxes(boxes1, boxes2)
+
+        return cum_loss/(i+1), road_ts, box_ats
         
     def train(self,
               optimizer = None,
@@ -233,6 +249,8 @@ class Learner():
         
         cum_loss =  0.0
         best_val_loss = float("inf")
+        best_val_road = 0.0
+        best_val_image = 0.0
         best_iter = 0
         exp_log_dir = os.path.join(self.log_dir, self.experiment_name)
         
@@ -270,13 +288,17 @@ class Learner():
                                                          idx=global_step,
                                                          scheduler=scheduler,
                                                          optimizer=optimizer,
-                                                         accumulated=accumulated)                
+                                                         accumulated=accumulated)
+
+                if accumulated == 0:
+                    global_step += 1
+
                 cum_loss += iter_loss
                 
                 # check for best every best_int
                 if global_step % self.best_int == 0:
                     log.info("="*40+" Evaluating on step: {}".format(global_step))
-                    val_results = self.evaluate()
+                    val_results, val_road, val_image = self.evaluate()
                     
                     log.info("="*40+" Current Val Loss {}, Step = {} | Previous Best Loss {}, Step = {}".format(
                         val_results,
@@ -296,7 +318,13 @@ class Learner():
                         
                         torch.save(best_state_dict, best_path)
                         os.chmod(best_path, self.access_mode)
-                
+                    
+                    if val_road > best_val_road:
+                        best_val_road = val_road
+
+                    if val_image > best_val_image:
+                        best_val_image = val_image
+
                 # write to log every verbose_int
                 if global_step % self.verbose_int == 0:
                     log.info('='*40+' Iteration {} of {} | Average Training Loss {:.6f} |'\
@@ -329,4 +357,4 @@ class Learner():
                 )
             )
         
-        return {"Best Val Loss" : best_val_loss, "Best Val Step" : best_iter, "Best Weights" : best_path}
+        return {"best_val_loss" : best_val_loss, "best_val_road" : best_val_road, "best_val_image" : best_val_image, "best_val_step" : best_iter, "best_weights" : best_path}
