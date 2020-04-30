@@ -14,9 +14,6 @@ class Model(nn.Module):
         TO DO
         """
         super(Model, self).__init__()
-        self.image_w = image_w
-        self.road_w = road_w        
-        
         self.image_detect = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=9, pretrained_backbone=False)
         self.transform = self.image_detect.transform
         self.backbone = self.image_detect.backbone
