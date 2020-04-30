@@ -28,6 +28,7 @@ class Model(nn.Module):
     def forward(self,
                 images = None,
                 box_targets = None,
+                road_targets = None,
                 ):
         """
         Forward
