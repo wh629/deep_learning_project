@@ -1,7 +1,5 @@
-environment_wh.yml
-
 data/*
 out/*
-.idea/*
+src/.idea/*
 
 *.pyc
