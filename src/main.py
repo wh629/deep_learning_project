@@ -56,45 +56,56 @@ def main():
         parser.experiment,
         device))
     
-    data_handler = myio.IO(parser.data_dir,
-                           batch_size = parser.batch_size,
-                           shuffle=True,
+    data_handler = myio.IO(data_dir    = parser.data_dir,                # directory storing data
+                           batch_size  = parser.batch_size,              # batch size
+                           shuffle     = not parser.no_shuffle,          # whether to shuffle training data
+                           split       = parser.val_split,               # percentage of data for validation
                            )
     
+    # TODO:
     # create model
-    my_model = model.Model(None)
+    my_model = model.Model(road_lambda      = parser.road_lambda,        # relative weight of road map loss
+                           box_lambda       = parser.box_lambda,         # relative weight of bounding box loss
+                           preload_backbone = parser.preload,            # whether to load pretrained weights
+                           backbone_weights = parser.preload_weights,    # pretrained backbone weights if needed
+                           )
     
-    # create learner object for BERT model
-    trainer = learner.Learner(parser.access_mode,
-                              parser.experiment,
-                              my_model,
-                              device,
-                              data_handler,
-                              parser.save_dir,
-                              max_steps = parser.training_steps,
-                              log_int = parser.logging_steps,
-                              best_int = parser.save_steps,
-                              verbose_int = parser.verbose_steps,
-                              max_grad_norm = parser.max_grad_norm,
-                              optimizer = None,
-                              weight_decay = parser.weight_decay,
-                              lr = parser.learning_rate,
-                              eps = parser.adam_epsilon,
-                              accumulate_int = parser.accumulate_int,
-                              batch_size = parser.batch_size,
-                              warmup_pct = parser.pct_start
+    # create learner
+    trainer = learner.Learner(access_mode      = parser.access_mode,     # os access mode for created files
+                              experiment_name  = parser.experiment,      # name of experiment
+                              model            = my_model,               # model
+                              device           = device,                 # device to run experiment
+                              myio             = data_handler,           # myio.IO object for loading data
+                              save_dir         = parser.save_dir,        # directory to save results
+                              max_steps        = parser.training_steps,  # maximum number of update steps
+                              best_int         = parser.save_steps,      # interval for checking weights
+                              verbose_int      = parser.verbose_steps,   # interval for logging information
+                              max_grad_norm    = parser.max_grad_norm,   # maximum gradients to avoid exploding gradients
+                              optimizer        = None,                   # optimizer for training
+                              weight_decay     = parser.weight_decay,    # weight decay if using
+                              lr               = parser.learning_rate,   # learning rate
+                              eps              = parser.adam_epsilon,    # epsilon to use for adam
+                              accumulate_int   = parser.accumulate_int,  # number of steps to accumulate gradients before stepping
+                              batch_size       = parser.batch_size,      # batch size
+                              warmup_pct       = parser.pct_start,       # percent of updates used to warm-up learning rate
+                              save             = parser.save,            # whether to save weights
+                              patience         = parser.patience,        # number of checks without improvement before early stop
                               )
-    results = trainer.train()
-    results["Experiment"] = parser.experiment
+
+    # train model
+    results = trainer.train(labeled = not parser.no_label)
+
+    results["experiment"] = parser.experiment
     
-    # write results to "val_results.jsonl"
-    results_name = os.path.join(parser.save_dir, "val_results.jsonl")
+    # write results to "results.jsonl"
+    results_name = os.path.join(parser.save_dir, "results.jsonl")
     with open(results_name, 'a') as f:
         f.write(json.dumps(results) + "\n")
     os.chmod(results_name, parser.access_mode)
-    log.info("Baseline results written to: {}".format(results_name))
     
-    log.info("Total time is: {}min : {}s".format((time.time()-start)//60, (time.time()-start)%60))
+    log.info("Results written to: {}".format(results_name))
+    
+    log.info("Total time is: {} min : {} sec".format((time.time()-start)//60, (time.time()-start)%60))
     
 if __name__ == "__main__":
     main()
