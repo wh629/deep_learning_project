@@ -4,14 +4,14 @@ import numpy
 repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def encode_exp_name(dataset, model, max_length, lr, bs, max_epochs, seed):
-    return f"{dataset}_{model}_max-length_{max_length}_lr_{lr}_bs_{bs}_max-epochs_{max_epochs}_seed_{seed}"
+def encode_exp_name(lr, bs, max_steps, seed):
+    return f"lr_{lr}_bs_{bs}_max-steps_{max_steps}_seed_{seed}"
 
 
 def decode_exp_name(exp_name):
     dataset, model = exp_name.split("_")[:2]
-    max_length, lr, bs, max_epochs, seed = exp_name.split("_")[3::2]
-    max_length, lr, bs, max_epochs, seed = int(max_length), float(lr), int(bs), int(max_epochs), int(seed)
+    lr, bs, max_steps, seed = exp_name.split("_")[3::2]
+    lr, bs, max_steps, seed = float(lr), int(bs), int(max_steps), int(seed)
     return dataset, model, lr, bs, max_epochs, seed
 
 
@@ -47,6 +47,8 @@ def make_command(accumulate,
         f"--save_dir {results_dir} "
         f"--save_steps {check_int} "
         f"--verbose_steps {log_int} "
+        f"--road_lambda {road_lambda} "
+        f"--box_lambda {box_lambda} "
     )
 
     return command

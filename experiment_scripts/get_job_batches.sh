@@ -9,11 +9,18 @@ export DL_DATA_DIR=${PROJECT}/data
 export DL_RESULTS_DIR=${PROJECT}/results
 NETID=wh629
 TRIALS=1
-CAPACITY=2
+CAPACITY=4
+CHECK=500
+LOG=100
+ROAD=1.0
+BOX=1.0
 
 python hyper_parameter_tuning.py \
 	--user ${NETID} \
 	--n-trials ${TRIALS} \
-	--model ${MODEL} \
 	--gpu-capacity ${CAPACITY} \
+	--check_int ${CHECK} \
+	--log_int ${LOG} \
+	--road_lambda ${ROAD} \
+	--box_lambda ${BOX} \
 	--accumulate

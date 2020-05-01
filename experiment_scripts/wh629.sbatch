@@ -8,8 +8,8 @@
 #SBATCH --mail-type=END
 #SBATCH --mail-user=wh629@nyu.edu
 #SBATCH --mem=32000
-#SBATCH --job-name=bds
-#SBATCH --output=/scratch/wh629/bds/project/%j.out
+#SBATCH --job-name=dl
+#SBATCH --output=/scratch/wh629/dl/project/%j.out
 module purge
 module load anaconda3/5.3.1
 module load cuda/10.1.105

@@ -38,6 +38,8 @@ def submit_trials(args):
             args.results_dir,      # results directory
             args.check_int,        # checking interval
             args.log_int,          # logging interval
+            args.road_lambda,      # relative weight of road loss
+            args.box_lambda,       # relative weight of box loss
         )
         sbatch_file = os.path.join(args.repo_dir, "experiment_scripts", f"{args.user}.sbatch")
         jobs.append(f'COMMAND="{command}" sbatch {sbatch_file}\n')
@@ -69,6 +71,8 @@ if __name__ == "__main__":
     parser.add_argument('--check_int', type=int, default=1000)
     parser.add_argument('--log_int',type=int, default=100)
     parser.add_argument("--accumulate", action='store_true')
+    parser.add_argument('--road_lambda', type=float, default=1.0)
+    parser.add_argument('--box_lambda', type=float, default=1.0)
 
     args = parser.parse_args()
     args.repo_dir = repo_dir
