@@ -10,4 +10,7 @@ dependencies:
   - pandas
   - pip
   - matplotlib
-  - shapely
+  - pip
+    - pip:
+    - shapely
+    - PIL
