@@ -279,6 +279,8 @@ class Learner():
         # train
         global_step = 0
         accumulated = 0
+        checked = False
+        logged = False
         
         train_iterator = trange(0, int(max_epochs), desc = 'Epoch', mininterval=30)
         start = time.time()
@@ -296,9 +298,12 @@ class Learner():
 
                 if accumulated == 0:
                     global_step += 1
+                    checked = False
+                    logged = False
 
                 # check for best every best_int
-                if global_step % self.best_int == 0:
+                if global_step % self.best_int == 0 and not checked:
+                    checked = True
                     log.info("="*40+" Evaluating on step: {}".format(global_step))
                     val_results, val_road, val_image = self.evaluate()
                     
@@ -340,7 +345,8 @@ class Learner():
 
 
                 # write to log every verbose_int
-                if global_step % self.verbose_int == 0:
+                if global_step % self.verbose_int == 0 and not logged:
+                    logged = True
                     log.info('='*40+' Iteration {} of {} | Average Training Loss {:.6f} |'\
                              ' Best Val Road ts {} | Best Val Box ats {} | Best Iteration {} |'.format(
                                  global_step,
