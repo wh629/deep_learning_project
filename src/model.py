@@ -93,5 +93,7 @@ class Model(nn.Module):
         out.append(loss)
         out.append(boxes)
         out.append(roads)
+        out.append(road_loss)
+        out.append(box_loss)
 
         return out

@@ -147,10 +147,14 @@ class Learner():
         
         # model outputs loss as first entry of tuple
         l = out[0]
+        road_l = out[3]
+        box_l = out[4]
         
         # for multi-gpu
         if isinstance(self.model, nn.DataParallel):
             l = l.mean() # average on multi-gpu parallel training
+            road_l = road_l.mean()
+            box_l = box_l.mean()
         
         # calculate gradients through back prop
         l.backward()
@@ -171,7 +175,7 @@ class Learner():
             # zero gradients
             optimizer.zero_grad()
         
-        return l.detach(), accumulated
+        return l.detach(), accumulated, road_l.detach(), box_l.detach()
         
     def evaluate(self):
         """
@@ -283,11 +287,11 @@ class Learner():
         for epoch in train_iterator:
             epoch_iterator = tqdm(self.train_dataloader, desc='Train Iteration', mininterval=30)
             for step, batch in enumerate(epoch_iterator):
-                iter_loss, accumulated = self.train_step(batch       = batch,
-                                                         idx         = global_step,
-                                                         scheduler   = scheduler,
-                                                         optimizer   = optimizer,
-                                                         accumulated = accumulated)
+                iter_loss, accumulated, road_l, box_l = self.train_step(batch       = batch,
+                                                                        idx         = global_step,
+                                                                        scheduler   = scheduler,
+                                                                        optimizer   = optimizer,
+                                                                        accumulated = accumulated)
                 cum_loss += iter_loss
 
                 if accumulated == 0:
@@ -346,6 +350,7 @@ class Learner():
                                  best_val_image,
                                  best_iter
                         )
+                    log.info('='*40+' Box Loss {} | Road Loss {} '.format(road_l, box_l)+'='*40)
                     )
                 
                 # break training if max steps reached (+1 to get max_step)

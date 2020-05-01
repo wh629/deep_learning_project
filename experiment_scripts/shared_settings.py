@@ -15,22 +15,19 @@ def decode_exp_name(exp_name):
     return dataset, model, lr, bs, max_epochs, seed
 
 
-def make_command(dataset,
-                 model,
-                 max_length,
+def make_command(accumulate,
+                 gpu_capacity,
                  lr,
                  bs,
-                 max_epochs,
+                 max_steps,
                  seed,
-                 gpu_capacity,
                  data_dir,
                  results_dir,
-                 accumulate,
                  check_int,
                  log_int,
                  ):
 
-    exp_name = f"{encode_exp_name(dataset, model, max_length, lr, bs, max_epochs, seed)}"
+    exp_name = f"{encode_exp_name(lr, bs, max_steps, seed)}"
     
     if accumulate:
         accumulation = int(numpy.ceil(bs / gpu_capacity))
@@ -40,19 +37,16 @@ def make_command(dataset,
         bs_fill = bs
 
     command = (
-        f'{os.path.join(repo_dir, "code", "main.py")} '
-        f"--exp_name {exp_name} "
-        f"--data_name {dataset} "
-        f"--input_length {max_length} "
-        f"--model {model} "
+        f'{os.path.join(repo_dir, "src", "main.py")} '
+        f"--experiment {exp_name} "
         f"--batch_size {bs_fill} "
-        f"--grad_accum {accumulation} "
-        f"--lr {lr} "
-        f"--max_epochs {max_epochs} "
+        f"--accumulate_int {accumulation} "
+        f"--learning_rate {lr} "
+        f"--training_steps {max_epochs} "
         f"--data_dir {data_dir} "
         f"--save_dir {results_dir} "
-        f"--check_int {check_int} "
-        f"--log_int {log_int}"
+        f"--save_steps {check_int} "
+        f"--verbose_steps {log_int} "
     )
 
     return command
