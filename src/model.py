@@ -34,6 +34,8 @@ class Model(nn.Module):
             self.backbone.load_state_dict(torch.load(backbone_weights))
 
         #TODO get into right output shape
+        # comment: if you make it [N, 800, 800, 2] and use CrossEntropyLoss() it will make it easier to make a decision whether it's true or false
+        #           for each cell we can just take the max of the 2 logits
         self.road = nn.Sequential(
             nn.Conv2d(...)
             nn.ReLU()
@@ -41,7 +43,8 @@ class Model(nn.Module):
         )
 
         #TODO doublecheck road loss
-        self.road_loss = nn.BCEWithLogitsLoss()
+        #self.road_loss = nn.BCEWithLogitsLoss()
+        self.road_loss = nn.CrossEntropyLoss()
 
     def forward(self,
                 images = None,
@@ -59,6 +62,7 @@ class Model(nn.Module):
 
         """
         # TODO: group images and resize to 800x800
+        # samples is a cuda tensor with size [batch_size, 6, 3, 256, 306]
         rescaled_images = ...
 
         # TODO: repackage labels from [N, 2, 4] to [N, 4]
@@ -81,7 +85,21 @@ class Model(nn.Module):
         #images, targets = self.transform(images, None)
         features = self.backbone(images.tensors)
         roads = self.road(features)
-        road_loss = self.road_loss(roads, road_targets)
+
+        # should be [N, 800, 800, 2]
+        batch_size, width, height, logits = roads.shape
+
+        # TODO: cast road_targets from boolean TRUE/FALSE to Integers 1/0
+        road_labels = ...
+
+        road_loss = 0
+        for i in range(batch_size):
+            # can apply CrossEntropyLoss to unpacked road_map
+            # https://pytorch.org/docs/stable/nn.html#crossentropyloss
+            single_road = roads[i,:,:,:].squeeze().view(width*height, logits)
+            single_road_labels = road_labels[i,:,:].squeeze().view(width*height)
+            road_loss += self.road_loss(single_road, sing_road_labels)
+        road_loss = road_loss.mean()
 
         #TODO: Calculate losses if applicable
         loss = self.road_lambda*road_loss + self.box_lambda*box_loss
@@ -89,10 +107,18 @@ class Model(nn.Module):
         #TODO: repackage bounding boxes
         boxes = ...
 
+        #TODO: make road map binary values, then to boolean TRUE/FALSE
+        # not sure if this works but check documentation here
+        # https://pytorch.org/docs/stable/torch.html#comparison-ops
+        values, b_roads = torch.max(roads, dim = 3)
+        # not sure if this works but check documentation here
+        # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to
+        b_roads = b_roads.bool()
+
         out = []
         out.append(loss)
         out.append(boxes)
-        out.append(roads)
+        out.append(b_roads)
         out.append(road_loss)
         out.append(box_loss)
 
