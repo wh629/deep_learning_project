@@ -174,8 +174,8 @@ class Learner():
         
             # zero gradients
             optimizer.zero_grad()
-        
-        return l.detach(), accumulated, road_l.detach(), box_l.detach()
+
+        return l.detach().item(), accumulated, road_l.detach().item(), box_l.detach().item()
         
     def evaluate(self):
         """
@@ -199,11 +199,7 @@ class Learner():
         # stop gradient tracking
         with torch.no_grad():
             for i, batch in enumerate(self.val_dataloader):
-# =============================================================================
-#                 # TO DO:
-#                 # unpack data and labels from batch and send to device
-# =============================================================================
-                inputs = self.pack_input(batch) # TO IMPLEMENT
+                inputs = self.pack_input(batch)
                 
                 out = self.model(**inputs)
                 
