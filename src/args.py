@@ -110,6 +110,10 @@ args.add_argument('--save',
 args.add_argument('--no_label',
                   action='store_true',
                   help='whether to use unlabeled data')
+args.add_argument('--patience',
+                  type=int,
+                  default=5,
+                  help='number of checks without improvement before early stop')
 
 def check_args(parser):
     """
