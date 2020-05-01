@@ -28,6 +28,23 @@ args.add_argument('--access_mode',
                   type=int,
                   default=0o777,
                   help='access mode of files created')
+# =============================================================================
+# for model
+# =============================================================================
+args.add_argument('--road_lambda',
+                  type=float,
+                  default=1.0,
+                  help='relative weight of road map loss')
+args.add_argument('--box_lambda',
+                  type=float,
+                  default=1.0,
+                  help='relative weight of box loss')
+args.add_argument('--preload',
+                  action='store_true',
+                  help='whether to preload backbone weights')
+args.add_argument('--preload_weights',
+                  type=str,
+                  help='file containing backbone weights to preload')
 
 # =============================================================================
 # for dataloading
@@ -71,10 +88,6 @@ args.add_argument('--max_grad_norm',
                   type=float,
                   default=0.0,
                   help='max gradient norm for clipping')
-args.add_argument('--logging_steps',
-                  type=int,
-                  default=1e4,
-                  help='logs best weights every X update steps for experiment')
 args.add_argument('--save_steps',
                   type=int,
                   default=500,
@@ -94,6 +107,9 @@ args.add_argument('--accumulate_int',
 args.add_argument('--save',
                   action='store_true',
                   help='whether to save model weights')
+args.add_argument('--no_label',
+                  action='store_true',
+                  help='whether to use unlabeled data')
 
 def check_args(parser):
     """
