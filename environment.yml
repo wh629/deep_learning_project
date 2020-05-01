@@ -11,7 +11,7 @@ dependencies:
   - pip
   - matplotlib
   - pip
-    - pip:
+  - pip:
     - shapely
     - pillow==6.1
     - tqdm
