@@ -13,4 +13,4 @@ dependencies:
   - pip
     - pip:
     - shapely
-    - PIL
+    - pillow=6.2.1
