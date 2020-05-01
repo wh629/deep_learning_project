@@ -23,10 +23,10 @@ class IO:
         
     """
     def __init__(self,
-                 data_dir,                # name of the directory storing all tasks
-                 batch_size=32,           # batch size for training
-                 shuffle=True,            # whether to shuffle train sampling
-                 split = 0.2,
+                 data_dir = None,   # name of the directory storing all tasks
+                 batch_size=32,     # batch size for training
+                 shuffle=True,      # whether to shuffle train sampling
+                 split = 0.2,       # percent split for validation
                  ):
         
         self.data_dir =  data_dir
@@ -54,7 +54,7 @@ class IO:
         """
         Load data and create dataloader
         
-        Labeled Data Batch: sample, target, road_image, extra
+        Labeled Data Batch: image, target, road_image, extra
         Unlabeled Data Batch: image, camera_index
 
         --------------------
@@ -66,7 +66,7 @@ class IO:
 
         train_dl = DataLoader(train,
                               batch_size = self.batch_size,
-                              shuffle = True,
+                              shuffle = self.shuffle,
                               collate_fn = collate_fn)
 
         val_dl = DataLoader(val,
