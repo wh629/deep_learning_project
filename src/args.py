@@ -32,13 +32,6 @@ args.add_argument('--access_mode',
 # =============================================================================
 # for dataloading
 # =============================================================================
-args.add_argument('--overwrite_cache', 
-                  action='store_true',
-                  help='overwrite the cached data sets')
-args.add_argument('--doc_stride',
-                  type=int,
-                  default=128,
-                  help='when chunking, how much stride between chunks')
 args.add_argument('--data_dir',
                   type=str,
                   default='data',
@@ -47,10 +40,13 @@ args.add_argument('--batch_size',
                   type=int, 
                   default=8,
                   help='batch size')
-args.add_argument('--accumulate_int',
-                  type=int,
-                  default=1,
-                  help='number of steps to accumulate gradient')
+args.add_argument('--no_shuffle',
+                  action='store_true',
+                  help='whether not to shuffle training data in sampler')
+args.add_argument('--val_split',
+                  type=float,
+                  default=0.2,
+                  help='percent split for validation')
 
 # =============================================================================
 # for training
@@ -61,7 +57,7 @@ args.add_argument('--training_steps',
                   help='number of updates for fine-tuning')
 args.add_argument('--learning_rate', 
                   type=float, 
-                  default=1e-4,
+                  default=1e-2,
                   help='initial learning rate for Adam')
 args.add_argument("--weight_decay",
                   type=float,
@@ -73,7 +69,7 @@ args.add_argument('--adam_epsilon',
                   help='epsilon for Adam optimizer')
 args.add_argument('--max_grad_norm',
                   type=float,
-                  default=1.0,
+                  default=0.0,
                   help='max gradient norm for clipping')
 args.add_argument('--logging_steps',
                   type=int,
@@ -85,12 +81,19 @@ args.add_argument('--save_steps',
                   help='save best weights every X update steps')
 args.add_argument('--verbose_steps',
                   type=int,
-                  default=1000,
+                  default=100,
                   help='Log results ever X update steps')
 args.add_argument('--pct_start',
                   type=float,
                   default=0.0,
                   help='percentage of cycle to warm-up learning rate')
+args.add_argument('--accumulate_int',
+                  type=int,
+                  default=1,
+                  help='number of steps to accumulate gradient')
+args.add_argument('--save',
+                  action='store_true',
+                  help='whether to save model weights')
 
 def check_args(parser):
     """
