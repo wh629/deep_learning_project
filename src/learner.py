@@ -37,7 +37,8 @@ class Learner():
                  eps = 1e-8,
                  accumulate_int = 1,
                  batch_size = 8,
-                 warmup_pct = 0.0
+                 warmup_pct = 0.0,
+                 save = False,
                  ):
         """
         Object to store learning. Used for fine-tuning.
@@ -61,6 +62,7 @@ class Learner():
         self.accumulate_int = accumulate_int
         self.batch_size = batch_size
         self.warmup_pct = warmup_pct
+        self.save = save
         
         # make directory for recorded weights if doesn't already exist
         self.log_dir = os.path.join(self.save_dir, 'logged')
@@ -306,22 +308,26 @@ class Learner():
                         best_val_loss,
                         best_iter))
                     
+                    # check for best loss
                     if val_results < best_val_loss:
                         best_val_loss = val_results
                         best_iter = global_step
                         
-                        # for multi-gpu
-                        if isinstance(self.model, nn.DataParallel):
-                            best_state_dict = self.model.module.state_dict()
-                        else:
-                            best_state_dict = self.model.state_dict()
-                        
-                        torch.save(best_state_dict, best_path)
-                        os.chmod(best_path, self.access_mode)
+                        if self.save:
+                            # for multi-gpu
+                            if isinstance(self.model, nn.DataParallel):
+                                best_state_dict = self.model.module.state_dict()
+                            else:
+                                best_state_dict = self.model.state_dict()
+                            
+                            torch.save(best_state_dict, best_path)
+                            os.chmod(best_path, self.access_mode)
                     
+                    # check for best road ts
                     if val_road > best_val_road:
                         best_val_road = val_road
 
+                    # check for best image ats
                     if val_image > best_val_image:
                         best_val_image = val_image
 
