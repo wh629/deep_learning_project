@@ -7,9 +7,6 @@ import torch.nn as nn
 import torch.optim as opt
 import numpy as np
 from sklearn import metrics
-import transformers
-import transformers.data.processors.squad as sq
-import transformers.data.metrics.squad_metrics as sq_metrics
 import os
 import copy
 from tqdm import tqdm, trange
