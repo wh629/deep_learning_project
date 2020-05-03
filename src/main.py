@@ -28,7 +28,7 @@ def main():
     parser = args.parse_args()
 
     if parser.run_log == 'log':
-        parser.run_log = os.path.join(parser.savd_dir, 'log')
+        parser.run_log = os.path.join(parser.save_dir, 'log')
 
     if not os.path.exists(parser.run_log):
         os.mkdir(parser.run_log)
