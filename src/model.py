@@ -168,6 +168,7 @@ class Model(nn.Module):
         for key, feature in features.items():
             bs, c, h, w = feature.shape
             while h <= self.target_size:
+                print(h)
                 temp = self.relu(self.double_dim_minus1(feature, output_size = [mapping_to[h], mapping_to[h]]))
                 bs, c, h, w = temp.shape
             features_new.append(nn.relu(self.conv_256_1(temp)))
