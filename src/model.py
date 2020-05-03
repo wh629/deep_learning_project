@@ -166,11 +166,10 @@ class Model(nn.Module):
         features_new = []
         mapping_to = {13: 25, 25: 50, 50: 100, 100: 200, 200: 400, 400: 800}
         for key, feature in features.items():
-            bs, c, h, w = feature.shape
+            temp = feature
+            bs, c, h, w = temp.shape
             while h < self.target_size:
-                log.info(f"size is {h}")
-                log.info(f"mapped to {mapping_to[h]}")
-                temp = self.relu(self.double_dim_minus1(feature, output_size = [mapping_to[h], mapping_to[h]]))
+                temp = self.relu(self.double_dim_minus1(temp, output_size = [mapping_to[h], mapping_to[h]]))
                 bs, c, h, w = temp.shape
             features_new.append(nn.relu(self.conv_256_1(temp)))
 
