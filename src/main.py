@@ -26,7 +26,13 @@ def main():
     repository = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
     parser = args.parse_args()
-    
+
+    if parser.run_log == 'log':
+        parser.run_log = os.path.join(parser.savd_dir, 'log')
+
+    if not os.path.exists(parser.run_log):
+        os.mkdir(parser.run_log)
+
     # run some checks on arguments
     check_args(parser)
     

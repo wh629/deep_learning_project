@@ -22,7 +22,7 @@ args.add_argument('--seed',
                   help='random seed')
 args.add_argument('--run_log',
                   type=str,
-                  default=os.path.join(os.getcwd(),'log'),
+                  default='log',
                   help='where to print run log')
 args.add_argument('--access_mode',
                   type=int,
