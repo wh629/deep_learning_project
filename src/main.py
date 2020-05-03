@@ -88,7 +88,7 @@ def main():
                               accumulate_int   = parser.accumulate_int,  # number of steps to accumulate gradients before stepping
                               batch_size       = parser.batch_size,      # batch size
                               warmup_pct       = parser.pct_start,       # percent of updates used to warm-up learning rate
-                              save             = parser.save,            # whether to save weights
+                              save             = not parser.no_save,     # whether to save weights
                               patience         = parser.patience,        # number of checks without improvement before early stop
                               )
 

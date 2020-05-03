@@ -144,7 +144,12 @@ class Learner():
             
         # send data through model forward
         out = self.model(**inputs)
-        
+        # out[0] First element as loss
+        # out[1] Second element as predicted bounding boxes( for evaluation.o.w.empty list)
+        # out[2] Third element as road map
+        # out[3] road_loss
+        # out[4] box_loss (for train.o.w. 0)
+
         # model outputs loss as first entry of tuple
         l = out[0]
         road_l = out[3]
@@ -187,38 +192,36 @@ class Learner():
         """            
         # puts model in evaluation mode
         self.model.eval()
-        
-        cum_loss = 0
-        
-        true_boxes = []
-        true_roads = []
 
         pred_boxes = []
         pred_roads = []
+
+        road_ts = 0
+        box_ats = 0
 
         # stop gradient tracking
         with torch.no_grad():
             for i, batch in enumerate(self.val_dataloader):
                 inputs = self.pack_input(batch)
-                
+                # {"images": batch[0],
+                #  "box_targets": batch[1],
+                #  "road_targets": batch[2]}
+
+
                 out = self.model(**inputs)
-                
-                l = out[0]
-                
-                if isinstance(self.model, nn.DataParallel):
-                    l = l.mean()
-                
-                cum_loss += l
-        
-        #TODO: calculate ts road map and ats bounding boxes
-        # might need to loop for road_ts
-        for road_map1, road_map2 in zip(pred_roads, true_roads):
-            road_ts = helper.compute_ts_road_map(road_map1, road_map2)
+                # out[0] First element as loss
+                # out[1] Second element as predicted bounding boxes( for evaluation.o.w.empty list)
+                # out[2] Third element as road map
+                # out[3] road_loss
+                # out[4] box_loss(for train.o.w. 0)
 
-        for boxes1, boxes2 in zip(pred_boxes, pred_roads):
-            box_ats = helper.compute_ats_bounding_boxes(boxes1, boxes2)
+                for road_map1, road_map2 in zip(pred_roads, inputs['road_targets']):
+                    road_ts += helper.compute_ts_road_map(road_map1, road_map2)
 
-        return cum_loss/(i+1), road_ts, box_ats
+                for boxes1, boxes2 in zip(pred_boxes, inputs['box_targets']):
+                    box_ats += helper.compute_ats_bounding_boxes(boxes1, boxes2['bounding_box'])
+
+        return road_ts.mean(), box_ats.mean()
         
     def train(self,
               optimizer = None,  # optimizer to use for training
@@ -373,8 +376,7 @@ class Learner():
                 )
             )
         
-        return {"best_val_loss" : best_val_loss,
-                "best_val_road" : best_val_road,
+        return {"best_val_road" : best_val_road,
                 "best_val_image" : best_val_image,
                 "best_val_step" : best_iter,
                 "best_weights" : best_path,

@@ -76,34 +76,28 @@ def repackage_targets(targets):
     return repackaged
 
 
-def map_level_loss(map_pred: torch.Tensor, map_true: torch.Tensor):
-    """
-    Intersection over Union for two maps.
-    """
-    intersection_part = map_pred * map_true
-    union_part = map_pred + map_true - intersection_part
-    return - intersection_part.sum() / union_part.sum()
-
-
 class Model(nn.Module):
     def __init__(self,
-                 road_lambda = 1,          # relative weight of road map loss
-                 box_lambda  = 1,          # relative weight of bounding box loss
-                 preload_backbone = False, # whether to load pretrained weights
-                 backbone_weights = None,  # pretrained backbone weights if needed
+                 road_lambda = 1,           # relative weight of road map loss
+                 box_lambda  = 1,           # relative weight of bounding box loss
+                 preload_backbone = False,  # whether to load pretrained weights
+                 backbone_weights = None,   # pretrained backbone weights if needed
                  ):
         
         """
         Model initializer
         """
         super(Model, self).__init__()
-        # TODO: double check how num_classes is used
+        # weights for loss
+        self.road_lambda = road_lambda
+        self.box_lambda = box_lambda
+
+        # for bounding box detection
         self.image_detect = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False,
                                                                                  progress=True,
                                                                                  num_classes=9,
                                                                                  pretrained_backbone=False)
-        # comment: not sure if transform needed because already handeled in data_helper
-        #self.transform = self.image_detect.transform
+
         self.backbone = self.image_detect.backbone
         
         # to prepare for pretraining
@@ -111,10 +105,7 @@ class Model(nn.Module):
             assert os.path.exists(backbone_weights), "No backbone weights to load. {}".format(backbone_weights)
             self.backbone.load_state_dict(torch.load(backbone_weights))
 
-        #TODO get into right output shape
-        # comment: if you make it [batch_size, 800, 800] and use BCEWithLogitsLoss() it will make it easier to make a decision whether it's true or false
-        #           for each cell we can just take the max of the 2 logits
-
+        # for road map
         self.double_dim_minus1 = nn.ConvTranspose2d(in_channels = 256, out_channels = 256, kernel_size = 3, stride = 2, padding = 1)
         self.relu = nn.ReLU()
         self.target_size = 800
@@ -124,9 +115,7 @@ class Model(nn.Module):
         self.sig = nn.Sigmoid()
         self.threshold = 0.5
 
-        #TODO doublecheck road loss
         self.road_loss = nn.BCEWithLogitsLoss()
-        #self.road_loss = nn.CrossEntropyLoss()
 
     def forward(self,
                 images = None,
@@ -138,9 +127,11 @@ class Model(nn.Module):
         ----------------------
         Returns:
         List with 
-            0) First element as loss
-            1) Second element as predicted bounding boxes
-            2) Third element as road map
+            out[0] First element as loss
+            out[1] Second element as predicted bounding boxes (for evaluation. o.w. empty list)
+            out[2] Third element as road map
+            out[3] road_loss
+            out[4] box_loss (for train. o.w. 0)
 
         """
         # repackage images from [batch_size, 6, 3, 256, 306] to [batch_size, 3, 800, 800]
@@ -170,14 +161,14 @@ class Model(nn.Module):
         #     key: 1    -> value: a tensor of shape [2, 256, 100, 100]
         #     key: 2    -> value: a tensor of shape [2, 256, 50, 50]
         #     key: 3    -> value: a tensor of shape [2, 256, 25, 25]
-        #     key: pool -> value: a tensor of shape [2, 256, 13, 13] -> [26, 26] -> [52, 52] -> [50, 50]
+        #     key: pool -> value: a tensor of shape [2, 256, 13, 13]
 
         features_new = []
         mapping_to = {13: 25, 25: 50, 50: 100, 100: 200, 200: 400, 400: 800}
         for key, feature in features.items():
             bs, c, h, w = feature.shape
             while h <= self.target_size:
-                temp = self.relu(self.double_dim_minus1(tensor, output_size = (mapping_to[h], mapping_to[h])))
+                temp = self.relu(self.double_dim_minus1(feature, output_size = [mapping_to[h], mapping_to[h]]))
                 bs, c, h, w = temp.shape
             features_new.append(nn.relu(self.conv_256_1(temp)))
 
@@ -187,42 +178,21 @@ class Model(nn.Module):
 
         road_loss = self.road_loss(roads, torch.stack(road_target, 0).int())
 
-        # # should be [batch_size, 800, 800, 2]
-        # batch_size, width, height, logits = roads.shape
-        #
-        # # cast road_targets from boolean TRUE/FALSE to Integers 1/0
-        # road_labels = [road_target.int() for road_target in road_targets]
-        #
-        # road_loss = 0
-        # for i in range(batch_size):
-        #     # can apply CrossEntropyLoss to unpacked road_map
-        #     # https://pytorch.org/docs/stable/nn.html#crossentropyloss
-        #     single_road = roads[i,:,:,:].squeeze().view(width*height, logits)
-        #     single_road_labels = road_labels[i,:,:].squeeze().view(width*height)
-        #     road_loss += self.road_loss(single_road, sing_road_labels)
-        # road_loss = road_loss.mean()
-
         # Calculate losses if applicable
         loss = self.road_lambda*road_loss + self.box_lambda*box_loss
 
         # repackage bounding boxes
         boxes = [get_boxes_from_2_points_to_4_points(boxes_i['boxes']) for boxes_i in rcnn_boxes]
 
-        #TODO: make road map binary values, then to boolean TRUE/FALSE
-        # not sure if this works but check documentation here
-        # https://pytorch.org/docs/stable/torch.html#comparison-ops
+        # repackage roads
         b_roads = self.sig(roads) > self.threshold
 
-        # values, b_roads = torch.max(roads, dim = 3)
-        # # not sure if this works but check documentation here
-        # # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to
-        # b_roads = b_roads.bool()
 
-        boxes_out = []
-        boxes_out.append(loss)
-        boxes_out.append(boxes)
-        boxes_out.append(b_roads)
-        boxes_out.append(road_loss)
-        boxes_out.append(box_loss)
+        out = []
+        out.append(loss)
+        out.append(boxes)
+        out.append(b_roads)
+        out.append(road_loss)
+        out.append(box_loss)
 
-        return boxes_out
+        return out

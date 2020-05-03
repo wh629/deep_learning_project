@@ -79,15 +79,15 @@ args.add_argument('--learning_rate',
 args.add_argument("--weight_decay",
                   type=float,
                   default=0.0,
-                  help='weight decay if applied')  # Q: Does default=0 work for training?
+                  help='weight decay if applied')
 args.add_argument('--adam_epsilon',
                   type=float,
                   default=1e-8,
                   help='epsilon for Adam optimizer')
 args.add_argument('--max_grad_norm',
                   type=float,
-                  default=0.0,
-                  help='max gradient norm for clipping')  # Q: Does default=0 work for training?
+                  default=1.0,
+                  help='max gradient norm for clipping')
 args.add_argument('--save_steps',
                   type=int,
                   default=500,
@@ -104,7 +104,7 @@ args.add_argument('--accumulate_int',
                   type=int,
                   default=1,
                   help='number of steps to accumulate gradient')
-args.add_argument('--save',
+args.add_argument('--no_save',
                   action='store_true',
                   help='whether to save model weights')
 args.add_argument('--no_label',
