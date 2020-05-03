@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torchvision
 import os
-
+import logging as log
 
 def concat_6_images(sample: torch.Tensor):
     """
@@ -168,7 +168,8 @@ class Model(nn.Module):
         for key, feature in features.items():
             bs, c, h, w = feature.shape
             while h < self.target_size:
-                print(h)
+                log.info(f"size is {h}")
+                log.info(f"mapped to {mapping_to[h]}")
                 temp = self.relu(self.double_dim_minus1(feature, output_size = [mapping_to[h], mapping_to[h]]))
                 bs, c, h, w = temp.shape
             features_new.append(nn.relu(self.conv_256_1(temp)))
