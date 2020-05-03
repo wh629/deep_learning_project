@@ -171,10 +171,10 @@ class Model(nn.Module):
             while h < self.target_size:
                 temp = self.relu(self.double_dim_minus1(temp, output_size = [mapping_to[h], mapping_to[h]]))
                 bs, c, h, w = temp.shape
-            features_new.append(nn.relu(self.conv_256_1(temp)))
+            features_new.append(self.relu(self.conv_256_1(temp)))
 
         thin_feature = torch.stack(features_new, 1)
-        single_feature = nn.relu(self.conv_5_1(thin_feature))
+        single_feature = self.relu(self.conv_5_1(thin_feature))
         roads = self.fc(single_feature)
 
         road_loss = self.road_loss(roads, torch.stack(road_target, 0).int())
