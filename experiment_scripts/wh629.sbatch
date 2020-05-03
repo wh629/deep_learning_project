@@ -10,15 +10,18 @@
 #SBATCH --mem=32000
 #SBATCH --job-name=dl
 #SBATCH --output=/scratch/wh629/dl/project/%j.out
+
+# customize netid for lines 9, 12
+# also customize line 23
+
 module purge
 module load anaconda3/5.3.1
 module load cuda/10.1.105
 module load gcc/6.3.0
 
-NETID=wh629
 source activate DL
 
-PROJECT=/scratch/wh629/dl/project
+PROJECT=/scratch/wh629/dl/project           # set to your project directory
 export DL_DATA_DIR=${PROJECT}/data
 export DL_RESULTS_DIR=${PROJECT}/results
 

@@ -9,7 +9,6 @@ def encode_exp_name(lr, bs, max_steps, seed):
 
 
 def decode_exp_name(exp_name):
-    dataset, model = exp_name.split("_")[:2]
     lr, bs, max_steps, seed = exp_name.split("_")[3::2]
     lr, bs, max_steps, seed = float(lr), int(bs), int(max_steps), int(seed)
     return dataset, model, lr, bs, max_epochs, seed

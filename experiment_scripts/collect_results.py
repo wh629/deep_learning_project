@@ -8,11 +8,9 @@ from shared_settings import decode_exp_name
 
 def collect_results(args):
     results = {
-        "dataset": [],
-        "model": [],
         "learning_rate": [],
         "batch_size": [],
-        "max_epochs": [],
+        "max_steps": [],
         "seed": [],
         "best_val_loss" : [],
         "best_val_road" : [],
@@ -24,12 +22,10 @@ def collect_results(args):
     }
 
     def record_exp(one_exp_result):
-        dataset, framing, lr, bs, max_epochs, seed = decode_exp_name(one_exp_result["exp_name"])
-        results["dataset"].append(dataset)
-        results["framing"].append(framing)
+        lr, bs, max_epochs, seed = decode_exp_name(one_exp_result["exp_name"])
         results["learning_rate"].append(lr)
         results["batch_size"].append(bs)
-        results["max_epochs"].append(max_epochs)
+        results["max_steps"].append(max_epochs)
         results["seed"].append(seed)
         results["best_val_loss"].append(one_exp_result["best_val_loss"])
         results["best_val_road"].append(one_exp_result["best_val_road"])
