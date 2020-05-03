@@ -241,10 +241,10 @@ class Learner():
         if scheduler is None:
             scheduler = opt.lr_scheduler.OneCycleLR(optimizer,
                                                     max_lr          = self.lr,
-                                                    tota_steps      = self.max_steps,
+                                                    total_steps      = self.max_steps,
                                                     anneal_strategy = "linear",
                                                     cycle_momentum  = False,
-                                                    pct_start       = self.warmup_pct
+                                                    pct_start       = self.warmup_pct,
                                                     )
         
         self.labeled = labeled
