@@ -98,7 +98,7 @@ class IO:
 
         cache_file = os.path.join(self.cached, subset+'.pt')
 
-        if os.path.exists(self.cached_name):
+        if os.path.exists(cache_file):
             log.info('Loading from cached file: {}'.format(cache_file))
             loaded = torch.load(cache_file)
             train, val = (loaded['train'],
