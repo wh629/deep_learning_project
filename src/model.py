@@ -154,8 +154,8 @@ class Model(nn.Module):
 
 
         # do road map
-        #images, targets = self.transform(images, None)
-        features = self.backbone(images.tensors)
+
+        features = self.backbone(rescaled_images)
         # The features is a OrderDict as follows:
         #     key: 0    -> value: a tensor of shape [2, 256, 200, 200]
         #     key: 1    -> value: a tensor of shape [2, 256, 100, 100]
