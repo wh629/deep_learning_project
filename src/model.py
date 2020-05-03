@@ -167,7 +167,7 @@ class Model(nn.Module):
         mapping_to = {13: 25, 25: 50, 50: 100, 100: 200, 200: 400, 400: 800}
         for key, feature in features.items():
             bs, c, h, w = feature.shape
-            while h <= self.target_size:
+            while h < self.target_size:
                 print(h)
                 temp = self.relu(self.double_dim_minus1(feature, output_size = [mapping_to[h], mapping_to[h]]))
                 bs, c, h, w = temp.shape
