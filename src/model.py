@@ -27,7 +27,7 @@ def repackage_image_batch(samples: torch.Tensor):
     """
     samples = [concat_6_images(sample) for sample in samples]
     samples = torch.stack(samples, 0)
-    samples = nn.functional.interpolate(samples, size=(800, 800))  #resize
+    samples = nn.functional.interpolate(samples, size=(800, 800), mode='nearest')  #resize
     return samples
 
 
@@ -63,12 +63,14 @@ def get_boxes_from_2_points_to_4_points(boxes: torch.Tensor):
 
 def repackage_targets(targets):
     """
+    Targets are a batch of individual targets.
+
     Repackage boxes from [batch_size, N, 2, 4] to [batch_size, N, 4]
     """
     repackaged = []
     for target in targets:
-        target_new = {'boxes': get_boxes_from_4_points_to_2_points(target['bounding_box']),
-                      'labels': target['category']}
+        target_new = {'boxes': get_boxes_from_4_points_to_2_points(target['bounding_box']).float(),
+                      'labels': target['category'].to(torch.int64)}
         repackaged.append(target_new)
 
     return repackaged
@@ -110,17 +112,21 @@ class Model(nn.Module):
             self.backbone.load_state_dict(torch.load(backbone_weights))
 
         #TODO get into right output shape
-        # comment: if you make it [N, 800, 800, 2] and use CrossEntropyLoss() it will make it easier to make a decision whether it's true or false
+        # comment: if you make it [batch_size, 800, 800] and use BCEWithLogitsLoss() it will make it easier to make a decision whether it's true or false
         #           for each cell we can just take the max of the 2 logits
-        self.road = nn.Sequential(
-            nn.Conv2d(...)
-            nn.ReLU()
-            ...
-        )
+
+        self.double_dim_minus1 = nn.ConvTranspose2d(in_channels = 256, out_channels = 256, kernel_size = 3, stride = 2, padding = 1)
+        self.relu = nn.ReLU()
+        self.target_size = 800
+        self.conv_256_1 = nn.Conv2d(in_channels = 256, out_channels = 1, kernel_size = 3, stride = 1, padding = 1)
+        self.conv_5_1 = nn.Conv2d(in_channels = 5, out_channels = 1, kernel_size = 3, stride = 1, padding = 1)
+        self.fc = nn.Conv2d(in_channels = 1, out_channels = 1, kernel_size = 1, stride = 1, padding = 0)
+        self.sig = nn.Sigmoid()
+        self.threshold = 0.5
 
         #TODO doublecheck road loss
-        #self.road_loss = nn.BCEWithLogitsLoss()
-        self.road_loss = nn.CrossEntropyLoss()
+        self.road_loss = nn.BCEWithLogitsLoss()
+        #self.road_loss = nn.CrossEntropyLoss()
 
     def forward(self,
                 images = None,
@@ -139,24 +145,24 @@ class Model(nn.Module):
         """
         # repackage images from [batch_size, 6, 3, 256, 306] to [batch_size, 3, 800, 800]
         rescaled_images = repackage_image_batch(images)
-
         # repackage labels from [batch_size, N, 2, 4] to [batch_size, N, 4]
         repackaged_box_targets = repackage_targets(box_targets)
 
         # do image detection
 
-        # TODO: get box loss
-        # output includes losses
         # https://github.com/pytorch/vision/blob/master/torchvision/models/detection/generalized_rcnn.py
-        boxes_out = self.image_detect(rescaled_images, repackaged_box_targets)
-        box_loss = ...
+        if self.training:
+            rcnn_output = self.image_detect(rescaled_images, repackaged_box_targets)
+            box_loss = rcnn_output['loss_box_reg']
+            rcnn_boxes = []
+        else:
+            # rcnn_boxes is a list of dicts with keys = ['boxes', 'labels', 'scores']
+            # each dict is for a sample in batch.
+            rcnn_boxes = self.image_detect(rescaled_images)
+            box_loss = 0
 
-        # TODO: get predicted box losses from output and repackage for output
-        pred_boxes = ...
 
         # do road map
-        # TODO: double check
-        # comment: not sure if transform needed since images already transformed in data_helper
         #images, targets = self.transform(images, None)
         features = self.backbone(images.tensors)
         # The features is a OrderDict as follows:
@@ -164,38 +170,53 @@ class Model(nn.Module):
         #     key: 1    -> value: a tensor of shape [2, 256, 100, 100]
         #     key: 2    -> value: a tensor of shape [2, 256, 50, 50]
         #     key: 3    -> value: a tensor of shape [2, 256, 25, 25]
-        #     key: pool -> value: a tensor of shape [2, 256, 13, 13]
+        #     key: pool -> value: a tensor of shape [2, 256, 13, 13] -> [26, 26] -> [52, 52] -> [50, 50]
 
-        roads = self.road(features)
+        features_new = []
+        mapping_to = {13: 25, 25: 50, 50: 100, 100: 200, 200: 400, 400: 800}
+        for key, feature in features.items():
+            bs, c, h, w = feature.shape
+            while h <= self.target_size:
+                temp = self.relu(self.double_dim_minus1(tensor, output_size = (mapping_to[h], mapping_to[h])))
+                bs, c, h, w = temp.shape
+            features_new.append(nn.relu(self.conv_256_1(temp)))
 
-        # should be [batch_size, 800, 800, 2]
-        batch_size, width, height, logits = roads.shape
+        thin_feature = torch.stack(features_new, 1)
+        single_feature = nn.relu(self.conv_5_1(thin_feature))
+        roads = self.fc(single_feature)
 
-        # cast road_targets from boolean TRUE/FALSE to Integers 1/0
-        road_labels = [road_target.int() for road_target in road_targets]
+        road_loss = self.road_loss(roads, torch.stack(road_target, 0).int())
 
-        road_loss = 0
-        for i in range(batch_size):
-            # can apply CrossEntropyLoss to unpacked road_map
-            # https://pytorch.org/docs/stable/nn.html#crossentropyloss
-            single_road = roads[i,:,:,:].squeeze().view(width*height, logits)
-            single_road_labels = road_labels[i,:,:].squeeze().view(width*height)
-            road_loss += self.road_loss(single_road, sing_road_labels)
-        road_loss = road_loss.mean()
+        # # should be [batch_size, 800, 800, 2]
+        # batch_size, width, height, logits = roads.shape
+        #
+        # # cast road_targets from boolean TRUE/FALSE to Integers 1/0
+        # road_labels = [road_target.int() for road_target in road_targets]
+        #
+        # road_loss = 0
+        # for i in range(batch_size):
+        #     # can apply CrossEntropyLoss to unpacked road_map
+        #     # https://pytorch.org/docs/stable/nn.html#crossentropyloss
+        #     single_road = roads[i,:,:,:].squeeze().view(width*height, logits)
+        #     single_road_labels = road_labels[i,:,:].squeeze().view(width*height)
+        #     road_loss += self.road_loss(single_road, sing_road_labels)
+        # road_loss = road_loss.mean()
 
-        #TODO: Calculate losses if applicable
+        # Calculate losses if applicable
         loss = self.road_lambda*road_loss + self.box_lambda*box_loss
 
-        #TODO: repackage bounding boxes
-        boxes = [get_boxes_from_2_points_to_4_points(batch_boxes) for batch_boxes in boxes_out]
+        # repackage bounding boxes
+        boxes = [get_boxes_from_2_points_to_4_points(boxes_i['boxes']) for boxes_i in rcnn_boxes]
 
         #TODO: make road map binary values, then to boolean TRUE/FALSE
         # not sure if this works but check documentation here
         # https://pytorch.org/docs/stable/torch.html#comparison-ops
-        values, b_roads = torch.max(roads, dim = 3)
-        # not sure if this works but check documentation here
-        # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to
-        b_roads = b_roads.bool()
+        b_roads = self.sig(roads) > self.threshold
+
+        # values, b_roads = torch.max(roads, dim = 3)
+        # # not sure if this works but check documentation here
+        # # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to
+        # b_roads = b_roads.bool()
 
         boxes_out = []
         boxes_out.append(loss)
