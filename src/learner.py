@@ -350,10 +350,9 @@ class Learner():
                                  cum_loss/global_step,
                                  best_val_road,
                                  best_val_image,
-                                 best_iter
+                                 best_iter)
                         )
                     log.info('='*40+' Box Loss {} | Road Loss {} '.format(road_l, box_l)+'='*40)
-                    )
                 
                 # break training if max steps reached (+1 to get max_step)
                 if global_step > self.max_steps or stop:

@@ -110,7 +110,7 @@ class IO:
                                          annotation_file = self.annotation_csv,
                                          scene_index = indices,
                                          transform = self.transform,
-                                         extra_info = True)
+                                         extra_info = False)
             else:
                 dataset = UnlabeledDataset(image_folder = self.data_dir,
                                            scene_index = indices,

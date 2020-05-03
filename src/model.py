@@ -7,6 +7,82 @@ import torch.nn as nn
 import torchvision
 import os
 
+
+def concat_6_images(sample: torch.Tensor):
+    """
+    Combine a stack of 6 images into a big image of 2 rows and 3 columns.
+
+    The sample.shape = (6, 3, H, W), while output.shape = (3, 2H, 3W).
+
+    Args:
+        sample (Tensor): a sample of size (6, 3, H, W) that contains 6 images.
+    """
+    num_images_per_row = 3
+    return torchvision.utils.make_grid(sample, nrow=num_images_per_row)
+
+
+def repackage_image_batch(samples: torch.Tensor):
+    """
+    Repackage a batch of images from [batch_size, 6, 3, 256, 306] to [batch_size, 3, 800, 800]
+    """
+    samples = [concat_6_images(sample) for sample in samples]
+    samples = torch.stack(samples, 0)
+    samples = nn.functional.interpolate(samples, size=(800, 800))  #resize
+    return samples
+
+
+def get_boxes_from_4_points_to_2_points(boxes: torch.Tensor):
+    """
+    N boxes in an image. The boxes.shape = [N, 2, 4]
+    """
+
+    # select two points
+    points = boxes[:, :, [0, 3]]
+
+    # convert meters to pixels
+    points[:, 0] = points[:, 0] * 10 + 400
+    points[:, 1] = - points[:, 1] * 10 + 400
+
+    # from [N, 2, 2] to [N, 4]
+    points = points.permute(0, 2, 1).reshape(-1, 4)
+
+    return points
+
+
+def get_boxes_from_2_points_to_4_points(boxes: torch.Tensor):
+    """
+    N boxes in an image. The boxes.shape = [N, 4]
+    """
+    t = boxes.reshape(-1, 2, 2).permute(0, 2, 1)
+    t[:, 0] = (t[:, 0] - 400) / 10
+    t[:, 1] = - (t[:, 1] - 400) / 10
+    x_vals = torch.stack([t[:, 0, 0], t[:, 0, 0], t[:, 0, 1], t[:, 0, 1]], 1)
+    y_vals = torch.stack([t[:, 1, 0], t[:, 1, 1], t[:, 1, 0], t[:, 1, 1]], 1)
+    return torch.stack([x_vals, y_vals], 1)
+
+
+def repackage_targets(targets):
+    """
+    Repackage boxes from [batch_size, N, 2, 4] to [batch_size, N, 4]
+    """
+    repackaged = []
+    for target in targets:
+        target_new = {'boxes': get_boxes_from_4_points_to_2_points(target['bounding_box']),
+                      'labels': target['category']}
+        repackaged.append(target_new)
+
+    return repackaged
+
+
+def map_level_loss(map_pred: torch.Tensor, map_true: torch.Tensor):
+    """
+    Intersection over Union for two maps.
+    """
+    intersection_part = map_pred * map_true
+    union_part = map_pred + map_true - intersection_part
+    return - intersection_part.sum() / union_part.sum()
+
+
 class Model(nn.Module):
     def __init__(self,
                  road_lambda = 1,          # relative weight of road map loss
@@ -61,19 +137,18 @@ class Model(nn.Module):
             2) Third element as road map
 
         """
-        # TODO: group images and resize to 800x800
-        # samples is a cuda tensor with size [batch_size, 6, 3, 256, 306]
-        rescaled_images = ...
+        # repackage images from [batch_size, 6, 3, 256, 306] to [batch_size, 3, 800, 800]
+        rescaled_images = repackage_image_batch(images)
 
-        # TODO: repackage labels from [N, 2, 4] to [N, 4]
-        repackaged_box_labels = ...
+        # repackage labels from [batch_size, N, 2, 4] to [batch_size, N, 4]
+        repackaged_box_targets = repackage_targets(box_targets)
 
         # do image detection
 
         # TODO: get box loss
         # output includes losses
         # https://github.com/pytorch/vision/blob/master/torchvision/models/detection/generalized_rcnn.py
-        out = self.image_detect(rescaled_images, repackaged_box_targets)
+        boxes_out = self.image_detect(rescaled_images, repackaged_box_targets)
         box_loss = ...
 
         # TODO: get predicted box losses from output and repackage for output
@@ -84,13 +159,20 @@ class Model(nn.Module):
         # comment: not sure if transform needed since images already transformed in data_helper
         #images, targets = self.transform(images, None)
         features = self.backbone(images.tensors)
+        # The features is a OrderDict as follows:
+        #     key: 0    -> value: a tensor of shape [2, 256, 200, 200]
+        #     key: 1    -> value: a tensor of shape [2, 256, 100, 100]
+        #     key: 2    -> value: a tensor of shape [2, 256, 50, 50]
+        #     key: 3    -> value: a tensor of shape [2, 256, 25, 25]
+        #     key: pool -> value: a tensor of shape [2, 256, 13, 13]
+
         roads = self.road(features)
 
-        # should be [N, 800, 800, 2]
+        # should be [batch_size, 800, 800, 2]
         batch_size, width, height, logits = roads.shape
 
-        # TODO: cast road_targets from boolean TRUE/FALSE to Integers 1/0
-        road_labels = ...
+        # cast road_targets from boolean TRUE/FALSE to Integers 1/0
+        road_labels = [road_target.int() for road_target in road_targets]
 
         road_loss = 0
         for i in range(batch_size):
@@ -105,7 +187,7 @@ class Model(nn.Module):
         loss = self.road_lambda*road_loss + self.box_lambda*box_loss
 
         #TODO: repackage bounding boxes
-        boxes = ...
+        boxes = [get_boxes_from_2_points_to_4_points(batch_boxes) for batch_boxes in boxes_out]
 
         #TODO: make road map binary values, then to boolean TRUE/FALSE
         # not sure if this works but check documentation here
@@ -115,11 +197,11 @@ class Model(nn.Module):
         # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to
         b_roads = b_roads.bool()
 
-        out = []
-        out.append(loss)
-        out.append(boxes)
-        out.append(b_roads)
-        out.append(road_loss)
-        out.append(box_loss)
+        boxes_out = []
+        boxes_out.append(loss)
+        boxes_out.append(boxes)
+        boxes_out.append(b_roads)
+        boxes_out.append(road_loss)
+        boxes_out.append(box_loss)
 
-        return out
+        return boxes_out
