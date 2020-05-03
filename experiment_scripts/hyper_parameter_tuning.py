@@ -15,7 +15,7 @@ def select_candidates():
     seed_range = 1e6
     lr = lr_candidates[random.randrange(0, len(lr_candidates), 1)]
     bs = bs_candidates[random.randrange(0, len(bs_candidates), 1)]
-    max_steps = max_steps_candidates[random.randrange(0, len(max_steps_candidates), 1)]
+    max_steps = int(max_steps_candidates[random.randrange(0, len(max_steps_candidates), 1)])
     seed = random.randint(0, seed_range)
 
     return lr, bs, max_steps, seed
