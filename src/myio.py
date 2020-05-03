@@ -11,7 +11,6 @@ import gzip
 import json
 import pandas as pd
 import logging as log
-import transformers.data.processors.squad as sq
 import time
 import numpy as np
 
