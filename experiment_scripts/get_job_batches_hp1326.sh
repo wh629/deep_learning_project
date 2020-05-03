@@ -4,7 +4,7 @@ module load cuda/10.1.105
 module load gcc/6.3.0
 source activate DL
 
-PROJECT=/scratch/hp1326/                   # project directory
+PROJECT=/scratch/hp1326                    # project directory
 export DL_DATA_DIR=${PROJECT}/data         # data directory
 export DL_RESULTS_DIR=${PROJECT}/results   # results directory
 NETID=hp1326                               # netid

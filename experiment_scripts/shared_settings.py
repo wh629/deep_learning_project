@@ -24,6 +24,8 @@ def make_command(accumulate,
                  results_dir,
                  check_int,
                  log_int,
+                 road_lambda,
+                 box_lambda,
                  ):
 
     exp_name = f"{encode_exp_name(lr, bs, max_steps, seed)}"
@@ -41,7 +43,7 @@ def make_command(accumulate,
         f"--batch_size {bs_fill} "
         f"--accumulate_int {accumulation} "
         f"--learning_rate {lr} "
-        f"--training_steps {max_epochs} "
+        f"--training_steps {max_steps} "
         f"--data_dir {data_dir} "
         f"--save_dir {results_dir} "
         f"--save_steps {check_int} "
