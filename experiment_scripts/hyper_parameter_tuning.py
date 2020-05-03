@@ -8,7 +8,7 @@ import argparse
 from shared_settings import make_command
 
 
-def select_candidates(dataset):
+def select_candidates():
     lr_candidates = [1e-2, 5e-2, 1e-3]
     bs_candidates = [8, 16]
     max_steps_candidates = [1e3, 5e3, 1e4]
@@ -26,7 +26,7 @@ def submit_trials(args):
 
     for trial in range(args.n_trials):
         # select candidates for trial
-        lr, bs, max_steps, seed = select_candidates(args.dataset)
+        lr, bs, max_steps, seed = select_candidates()
         command = make_command(
             args.accumulate,       # whether to do accumulating gradients
             args.gpu_capacity,     # maximum batch size per gpu
