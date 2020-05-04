@@ -173,7 +173,8 @@ class Model(nn.Module):
                 bs, c, h, w = temp.shape
             features_new.append(self.relu(self.conv_256_1(temp)))
 
-        thin_feature = torch.stack(features_new, dim=1)
+        #thin_feature = torch.stack(features_new, dim=1)
+        thin_feature = torch.cat(features_new, dim=1)
         log.info(f"thin_feature shape is {thin_feature.shape}")
         single_feature = self.relu(self.conv_5_1(thin_feature))
         roads = self.fc(single_feature)
