@@ -198,7 +198,7 @@ class Learner():
 
         # stop gradient tracking
         with torch.no_grad():
-            for i, batch in enumerate(self.val_dataloader):
+            for i, batch in enumerate(tqdm(self.val_dataloader, desc="Validation", mininterval=30)):
                 inputs = self.pack_input(batch)
                 # {"images": batch[0],
                 #  "box_targets": batch[1],
@@ -250,6 +250,8 @@ class Learner():
         self.labeled = labeled
 
         cum_loss =  0.0
+        cum_road_loss = 0.0
+        cum_box_loss = 0.0
         best_val_loss = float("inf")
         best_val_road = 0.0
         best_val_image = 0.0
@@ -291,6 +293,8 @@ class Learner():
                                                                         optimizer   = optimizer,
                                                                         accumulated = accumulated)
                 cum_loss += iter_loss
+                cum_road_loss += road_l
+                cum_box_loss += box_l
 
                 if accumulated == 0:
                     global_step += 1
@@ -352,7 +356,7 @@ class Learner():
                                  best_val_image,
                                  best_iter)
                         )
-                    log.info('='*40+' Box Loss {} | Road Loss {} '.format(road_l, box_l)+'='*40)
+                    log.info('='*40+' Box Loss {} | Road Loss {} '.format(cum_road_loss/global_step, cum_box_loss/global_step)+'='*40)
                 
                 # break training if max steps reached (+1 to get max_step)
                 if global_step > self.max_steps or stop:
@@ -373,7 +377,10 @@ class Learner():
                 )
             )
         
-        return {"best_val_road" : best_val_road,
+        return {"avg_train_loss" : cum_loss/global_step,
+                "avg_road_loss" : cum_road_loss/global_step,
+                "avg_box_loss" : cum_box_loss/global_step,
+                "best_val_road" : best_val_road,
                 "best_val_image" : best_val_image,
                 "best_val_step" : best_iter,
                 "best_weights" : best_path,

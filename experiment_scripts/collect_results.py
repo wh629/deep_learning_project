@@ -12,7 +12,9 @@ def collect_results(args):
         "batch_size": [],
         "max_steps": [],
         "seed": [],
-        "best_val_loss" : [],
+        "avg_train_loss" : [],
+        "avg_road_loss" : [],
+        "avg_box_loss" : [],
         "best_val_road" : [],
         "best_val_image" : [],
         "best_val_step" : [],
@@ -27,7 +29,9 @@ def collect_results(args):
         results["batch_size"].append(bs)
         results["max_steps"].append(max_epochs)
         results["seed"].append(seed)
-        results["best_val_loss"].append(one_exp_result["best_val_loss"])
+        results["avg_train_loss"].append(one_exp_result["avg_train_loss"])
+        results["avg_road_loss"].append(one_exp_result["avg_road_loss"])
+        results["avg_box_loss"].append(one_exp_result["avg_box_loss"])
         results["best_val_road"].append(one_exp_result["best_val_road"])
         results["best_val_image"].append(one_exp_result["best_val_image"])
         results["best_val_step"].append(one_exp_result["best_val_step"])
