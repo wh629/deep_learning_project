@@ -215,7 +215,7 @@ class Learner():
                 # out[4] box_loss(for train.o.w. 0)
 
                 for road_map1, road_map2 in zip(pred_roads, inputs['road_targets']):
-                    road_ts.append(helper.compute_ts_road_map(road_map1, road_map2))
+                    road_ts.append(helper.compute_ts_road_map(road_map1, road_map2).item())
 
                 for boxes1, boxes2 in zip(pred_boxes, inputs['box_targets']):
                     box_ats.append(helper.compute_ats_bounding_boxes(boxes1, boxes2['bounding_box']))
