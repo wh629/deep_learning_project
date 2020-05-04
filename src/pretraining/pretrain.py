@@ -164,7 +164,7 @@ class CameraEncoder(nn.Module):
         x = self.decoder(x)
 
         # get predictions
-        pred = x.max(dim = 1)
+        pred = torch.argmax(x, dim = 1)
         return x, pred
 
 
@@ -181,12 +181,12 @@ def generate_random_image_mask(channels, height, width):
 
     return mask
 
-def eval(loader, model, permutations, permutations_k, device, idx):
+def eval(loader, model, permutations, permutations_k, device, idx, debug):
     log.info(f"Evaluating at step {idx}")
     model.eval()
     correct = 0
     with torch.no_grad():
-        for batch_old in tqdm(loader, desc='Eval', mininterval=30):
+        for i, batch_old in enumerate(tqdm(loader, desc='Eval', mininterval=30)):
             batch = repackage_image_batch(batch_old)
 
             batch_size_now = batch.shape[0]
@@ -204,6 +204,10 @@ def eval(loader, model, permutations, permutations_k, device, idx):
             output, pred = model(batch)
 
             correct += torch.eq(pred, answers).sum()
+
+            if i == 1 and debug:
+                log.info("Debug break evaluation")
+                break
 
     model.train()
     return correct/len(loader.dataset) # returns the accuracy
@@ -313,7 +317,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
 
             if global_step % parser.save_steps == 0 and not checked:
                 checked = True
-                current_acc = eval(pre_train_val, model, permutations, permutations_k, device, global_step)
+                current_acc = eval(pre_train_val, model, permutations, permutations_k, device, global_step, parser.debug)
 
                 if current_acc > best_acc:
                     # if new best accuracy
@@ -392,6 +396,9 @@ def get_args():
                       type=float,
                       default = 0.1,
                       help='learning rate')
+    args.add_argument('--debug',
+                      action='store_true',
+                      help='whether debugging code for evaluation')
     return args.parse_args()
 
 
