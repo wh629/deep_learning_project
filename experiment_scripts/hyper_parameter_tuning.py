@@ -39,6 +39,8 @@ def submit_trials(args):
             args.log_int,          # logging interval
             args.road_lambda,      # relative weight of road loss
             args.box_lambda,       # relative weight of box loss
+            arg.preload,           # whether to preload weights
+            args.preload_weights,  # location of preloading weights
         )
         sbatch_file = os.path.join(args.repo_dir, "experiment_scripts", f"{args.user}.sbatch")
         jobs.append(f'COMMAND="{command}" sbatch {sbatch_file}\n')
@@ -72,6 +74,9 @@ if __name__ == "__main__":
     parser.add_argument("--accumulate", action='store_true')
     parser.add_argument('--road_lambda', type=float, default=1.0)
     parser.add_argument('--box_lambda', type=float, default=1.0)
+
+    parser.add_argument('--preload', action='store_true')
+    parser.add_argument('--preload_weights', type=str, default='')
 
     args = parser.parse_args()
     args.repo_dir = repo_dir

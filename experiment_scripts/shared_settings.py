@@ -4,14 +4,15 @@ import numpy
 repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def encode_exp_name(lr, bs, max_steps, seed):
-    return f"lr_{lr}_bs_{bs}_max-steps_{max_steps}_seed_{seed}"
+def encode_exp_name(preload, lr, bs, max_steps, seed):
+    return f"{preload}_lr_{lr}_bs_{bs}_max-steps_{max_steps}_seed_{seed}"
 
 
 def decode_exp_name(exp_name):
-    lr, bs, max_steps, seed = exp_name.split("_")[3::2]
+    preload = exp_name.split("_")[0]
+    lr, bs, max_steps, seed = exp_name.split("_")[2::2]
     lr, bs, max_steps, seed = float(lr), int(bs), int(max_steps), int(seed)
-    return dataset, model, lr, bs, max_epochs, seed
+    return preload, lr, bs, max_steps, seed
 
 
 def make_command(accumulate,
@@ -26,9 +27,11 @@ def make_command(accumulate,
                  log_int,
                  road_lambda,
                  box_lambda,
+                 preload,
+                 preload_weights,
                  ):
 
-    exp_name = f"{encode_exp_name(lr, bs, max_steps, seed)}"
+    exp_name = f"{encode_exp_name(preload, lr, bs, max_steps, seed)}"
     
     if accumulate:
         accumulation = int(numpy.ceil(bs / gpu_capacity))
@@ -51,5 +54,9 @@ def make_command(accumulate,
         f"--road_lambda {road_lambda} "
         f"--box_lambda {box_lambda} "
     )
+
+    if preload:
+        command += (f"--preload "
+                    f"--preload_weights {preload_weights} ")
 
     return command
