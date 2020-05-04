@@ -9,8 +9,8 @@ from shared_settings import make_command
 
 
 def select_candidates():
-    lr_candidates = [1e-2, 5e-2, 1e-3]
-    bs_candidates = [8, 16]
+    lr_candidates = [1e-2, 5e-3, 1e-3]
+    bs_candidates = [4, 8]
     max_steps_candidates = [1e3, 5e3, 1e4]
     seed_range = 1e6
     lr = lr_candidates[random.randrange(0, len(lr_candidates), 1)]
