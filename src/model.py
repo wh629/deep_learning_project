@@ -179,7 +179,7 @@ class Model(nn.Module):
         single_feature = self.relu(self.conv_5_1(thin_feature))
         roads = self.fc(single_feature)
 
-        road_loss = self.road_loss(roads, torch.stack(road_target, 0).int())
+        road_loss = self.road_loss(roads, torch.stack(road_targets, dim=0).int())
 
         # Calculate losses if applicable
         loss = self.road_lambda*road_loss + self.box_lambda*box_loss
