@@ -11,13 +11,13 @@ export DL_DATA_DIR=${PROJECT}/data
 export DL_RESULTS_DIR=${PROJECT}/results
 
 python ./src/pretraining/pretrain.py \
-      --batch_size 2 \
+      --batch_size 1 \
       --permutations_k 35 \
       --num_epochs 2 \
-      --accum_grad 4 \
+      --accum_grad 2 \
       --experiment ${EXPERIMENT} \
-      --log_steps 100 \
-      --save_steps 500 \
-      --patience 5 \
+      --log_steps 1 \
+      --save_steps 1 \
+      --patience 1 \
       --lr 0.1 \
       --split 0.1
