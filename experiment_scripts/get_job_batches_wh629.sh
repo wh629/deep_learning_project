@@ -14,6 +14,7 @@ CHECK=500                                  # number of update iterations between
 LOG=100                                    # number of update iterations between logging information
 ROAD=1.0                                   # relative weight of road map loss
 BOX=1.0                                    # relative weight of box loss
+PRETRAIN_WEIGHTS=''                        # absolute file name of preloaded weights with <path>\<filename>.pt
 
 python hyper_parameter_tuning.py \
 	--user ${NETID} \
@@ -23,4 +24,6 @@ python hyper_parameter_tuning.py \
 	--log_int ${LOG} \
 	--road_lambda ${ROAD} \
 	--box_lambda ${BOX} \
-	--accumulate
+	--accumulate #\                         <-- uncomment for loading pretrained weights
+	#--preload \                            <-- uncomment for loading pretrained weights
+	#--preload_weights ${PRETRAIN_WEIGHTS}  <-- uncomment for loading pretrained weights
