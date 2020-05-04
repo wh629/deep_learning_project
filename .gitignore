@@ -4,3 +4,5 @@ src/.idea/*
 .idea/*
 
 *.pyc
+
+experiment_scripts/submit_sbatch.sh
