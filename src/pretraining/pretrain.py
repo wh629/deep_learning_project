@@ -212,6 +212,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
     max_grad_bound = 1
 
     print('Start pre-training, batch_size = {}, permutations_k = {}'.format(batch_size, permutations_k))
+    log.info('Start pre-training, batch_size = {}, permutations_k = {}'.format(batch_size, permutations_k))
 
     # Set up your device
     cuda = torch.cuda.is_available()
