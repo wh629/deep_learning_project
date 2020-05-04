@@ -221,7 +221,7 @@ class Learner():
                     road_ts.append(helper.compute_ts_road_map(road_map1, road_map2).item())
 
                 for boxes1, boxes2 in zip(pred_boxes, inputs['box_targets']):
-                    box_ats.append(helper.compute_ats_bounding_boxes(boxes1, boxes2['bounding_box']))
+                    box_ats.append(helper.compute_ats_bounding_boxes(boxes1, boxes2['bounding_box']).item())
 
                 if i==1 and debug:
                     log.info('Debug')
