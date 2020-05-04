@@ -104,6 +104,7 @@ class Model(nn.Module):
         if preload_backbone:
             assert os.path.exists(backbone_weights), "No backbone weights to load. {}".format(backbone_weights)
             self.backbone.load_state_dict(torch.load(backbone_weights))
+            log.info(f"Preloaded weights from {backbone_weights}")
 
         # for road map
         self.double_dim_minus1 = nn.ConvTranspose2d(in_channels = 256, out_channels = 256, kernel_size = 3, stride = 2, padding = 1)
