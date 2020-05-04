@@ -39,7 +39,7 @@ def submit_trials(args):
             args.log_int,          # logging interval
             args.road_lambda,      # relative weight of road loss
             args.box_lambda,       # relative weight of box loss
-            arg.preload,           # whether to preload weights
+            args.preload,          # whether to preload weights
             args.preload_weights,  # location of preloading weights
         )
         sbatch_file = os.path.join(args.repo_dir, "experiment_scripts", f"{args.user}.sbatch")
