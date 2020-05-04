@@ -259,7 +259,6 @@ class Learner():
         cum_loss =  0.0
         cum_road_loss = 0.0
         cum_box_loss = 0.0
-        best_val_loss = float("inf")
         best_val_road = 0.0
         best_val_image = 0.0
         best_iter = 0
@@ -312,18 +311,15 @@ class Learner():
                 if global_step % self.best_int == 0 and not checked:
                     checked = True
                     log.info("="*40+" Evaluating on step: {}".format(global_step))
-                    val_results, val_road, val_image = self.evaluate(debug)
+                    val_road, val_image = self.evaluate(debug)
                     
-                    log.info("="*40+" Current Val Loss {}, Step = {} | Previous Best Loss {}, Step = {}".format(
-                        val_results,
+                    log.info("="*40+" Current Val Road {}, Box {}, Step = {} | Previous Best Loss {}, Box {}, Step = {}".format(
+                        val_road,
+                        val_image,
                         global_step,
-                        best_val_loss,
+                        best_val_road,
+                        best_val_image,
                         best_iter))
-                    
-                    # check for best loss
-                    if val_results < best_val_loss:
-                        best_val_loss = val_results
-                        best_iter = global_step
                     
                     # check for best road ts
                     if val_road > best_val_road:
