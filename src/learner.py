@@ -179,7 +179,8 @@ class Learner():
 
         return l.detach().item(), accumulated, road_l.detach().item(), box_l.detach().item()
         
-    def evaluate(self):
+    def evaluate(self,
+                 debug=False):
         """
         Evaluation model on task.
         
