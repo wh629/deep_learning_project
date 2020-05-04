@@ -181,9 +181,9 @@ class Model(nn.Module):
         roads = roads.view((bs, h, w))
 
         log.info(f"roads {roads}")
-        log.info(f"targets {torch.stack(road_targets, dim=0).int()}")
+        log.info(f"targets {torch.stack(road_targets, dim=0).float()}")
 
-        road_loss = self.road_loss(roads, torch.stack(road_targets, dim=0).int())
+        road_loss = self.road_loss(roads, torch.stack(road_targets, dim=0).float())
 
         # Calculate losses if applicable
         loss = self.road_lambda*road_loss + self.box_lambda*box_loss
