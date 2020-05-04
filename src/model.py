@@ -180,9 +180,6 @@ class Model(nn.Module):
         bs, c, h, w = roads.shape
         roads = roads.view((bs, h, w))
 
-        log.info(f"roads {roads}")
-        log.info(f"targets {torch.stack(road_targets, dim=0).float()}")
-
         road_loss = self.road_loss(roads, torch.stack(road_targets, dim=0).float())
 
         # Calculate losses if applicable
