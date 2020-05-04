@@ -2,10 +2,13 @@ import argparse
 import random
 import itertools
 import numpy as np
-
+from tqdm import trange, tqdm
+import os
 import torch
 import torch.nn as nn
 import torchvision
+import logging as log
+from datetime import datetime as dt
 
 from pretraining.data_helper import UnlabeledDataset
 
@@ -26,7 +29,14 @@ from pretraining.data_helper import UnlabeledDataset
 #     samples = [combine_6_images(sample) for sample in samples]
 #     samples = torch.stack(samples, 0)
 #     return samples
-
+def repackage_image_batch(samples: torch.Tensor):
+    """
+    Repackage a batch of images from [batch_size, 6, 3, 256, 306] to [batch_size, 6, 3, 800, 800]
+    """
+    samples_new = []
+    for sample in samples:
+        samples_new.append(nn.functional.interpolate(sample, size=(800, 800), mode='nearest'))  #resize
+    return torch.stack(samples_new, dim=0)
 
 def get_k_permutations_of_n_elements(k, n):
     """
@@ -58,28 +68,66 @@ def get_k_permutations_of_n_elements(k, n):
 
 
 class CameraEncoder(nn.Module):
-    def __init__(self, permutations_k=8, hidden_size=4096):
+    def __init__(self, permutations_k=8, hidden_size=1024):
         super().__init__()
 
-        self.resnet = torchvision.models.resnet18(pretrained=False, progress=False)
+        self.image_detect = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False,
+                                                                                 progress=True,
+                                                                                 num_classes=9,
+                                                                                 pretrained_backbone=False)
+
+        self.resnet = self.image_detect.backbone
+        self.double_dim_minus1 = nn.ConvTranspose2d(in_channels=256, out_channels=256, kernel_size=3, stride=2,
+                                                    padding=1)
+        self.relu = nn.ReLU()
+        self.target_size = 10
+        self.avg_pool = nn.AdaptiveAvgPool2d((self.target_size, self.target_size))
+
         self.decoder = nn.Sequential(
-            nn.Linear(6000, hidden_size),
+            nn.Linear(6*5*self.target_size*self.target_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, permutations_k),
-            nn.ReLU()
+            nn.Linear(hidden_size, permutations_k)
         )
 
     def forward(self, x):
         # first apply resnet to each of 6 images for all samples in current batch
-        xs = [self.resnet(x[:, i]) for i in range(x.shape[1])]
+        # x is (batch_size, 6, 3, 800, 800)
+        bs, _, _, _, _ = x.shape
 
-        # reshape the resnet outputs
-        x = torch.stack(xs, dim=1)
-        x = x.view(x.shape[0], -1)
+        xs = [self.resnet(x[:, i]) for i in range(x.shape[1])]
+        # The features is a OrderDict as follows:
+        #     key: 0    -> value: a tensor of shape [batch_size, 256, 200, 200]
+        #     key: 1    -> value: a tensor of shape [batch_size, 256, 100, 100]
+        #     key: 2    -> value: a tensor of shape [batch_size, 256, 50, 50]
+        #     key: 3    -> value: a tensor of shape [batch_size, 256, 25, 25]
+        #     key: pool -> value: a tensor of shape [batch_size, 256, 13, 13]
+
+        xs_new = []
+        for features in xs:
+            features_new = []
+            for key, feature in features.items():
+                temp = self.relu(self.avg_pool(feature))
+                features_new.append(self.relu(self.conv_256_1(temp).view(bs, -1)))
+                # list with entries of (batch_size, 10*10)
+
+            # thin_feature for single image
+            thin_feature = torch.cat(features_new, dim=1)
+            # size (batch_size, 5*10*10 = 500)
+
+            # for each image
+            xs_new.append(thin_feature)
+            # entries of xs_new are (batch_size, 500)
+
+        # combined images
+        # (batch_size, 3000)
+        x = torch.cat(xs_new, dim=1)
 
         # feed into decoder of fc layers
         x = self.decoder(x)
-        return x
+
+        # get predictions
+        pred = x.max(dim = 1)
+        return x, pred
 
 
 def generate_random_image_mask(channels, height, width):
@@ -95,12 +143,35 @@ def generate_random_image_mask(channels, height, width):
 
     return mask
 
+def eval(loader, model, permutations, permutations_k, device, idx):
+    log.info(f"Evaluating at step {idx}")
+    model.eval()
+    correct = 0
+    with torch.no_grad():
+        for batch_old in tqdm(loader, desc='Eval', mininterval=30):
+            batch = repackage_image_batch(batch_old)
+
+            batch_size_now = batch.shape[0]
+            # generate answers
+            answers = torch.randint(permutations_k, (batch_size_now,)).to(device)
+
+            # prepare input
+            for ith in range(batch_size_now):
+                batch[ith] = batch[ith, permutations[answers[ith].item()]]
+                for jth in range(6):
+                    random_mask = generate_random_image_mask(*batch[0, 0].shape)
+                    batch[ith, jth] *= random_mask
+
+            batch = batch.to(device)
+            output, pred = model(batch)
+
+            correct += torch.eq(pred, answers).sum()
+
+    model.train()
+    return correct/len(loader.dataset) # returns the accuracy
 
 def pretrain(batch_size=5, permutations_k=64):
-    learning_rate = 1e-4
-    weight_decay = 1e-8
     max_grad_bound = 1
-    num_epochs = 50
 
     print('Start pre-training, batch_size = {}, permutations_k = {}'.format(batch_size, permutations_k))
 
@@ -120,27 +191,53 @@ def pretrain(batch_size=5, permutations_k=64):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
-    image_folder = 'data'
     pretrain_scene_index = np.arange(106)
 
     transform = torchvision.transforms.ToTensor()
 
-    pretrain_dataset = UnlabeledDataset(image_folder=image_folder,
+    # load and split data
+    pretrain_dataset = UnlabeledDataset(image_folder=parser.data_dir,
                                         scene_index=pretrain_scene_index,
                                         first_dim='sample',
                                         transform=transform)
-    pre_train_loader = torch.utils.data.DataLoader(pretrain_dataset,
+
+    val_size = int(len(pretrain_dataset) * parser.split)
+    train_size = int(len(pretrain_dataset) - val_size)
+
+    train, val = torch.utils.data.random_split(pretrain_dataset,[train_size, val_size])
+
+    pre_train_loader = torch.utils.data.DataLoader(train,
                                                    batch_size=batch_size,
                                                    shuffle=True,
                                                    num_workers=2)
 
+    pre_train_val = torch.utils.data.DataLoader(val,
+                                                batch_size=batch_size,
+                                                shuffle=False,
+                                                num_workers=2)
+
     model = CameraEncoder(permutations_k).to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, eps=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=parser.lr)
 
-    for epoch in range(num_epochs):
-        for batch in pre_train_loader:
+    accumulated = 0
+    cum_loss = 0
+    global_step = 0
+    logged = False
+    checked = False
+    best_step = 0
+    best_acc = 0
+    stop = False
+    n_no_improve = 0
+
+    filename = os.path.join(parser.save_dir, f"{parser.experiment}_best.pt")
+
+    model.train()
+    for epoch in trange(0, parser.num_epochs, desc='Epochs', mininterval = 30):
+        for batch_old in tqdm(pre_train_loader, desc='Iteration', mininterval = 30):
+            batch = repackage_image_batch(batch_old)
+
             batch_size_now = batch.shape[0]
             # generate answers
             answers = torch.randint(permutations_k, (batch_size_now,)).to(device)
@@ -153,38 +250,122 @@ def pretrain(batch_size=5, permutations_k=64):
                     batch[ith, jth] *= random_mask
 
             batch = batch.to(device)
-            output = model(batch)
+            output, pred = model(batch)
             loss = criterion(output, answers)
-            optimizer.zero_grad()
+            cum_loss += loss.item()
+
+            if accumulated == 0:
+                model.zero_grad()
+
             loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), max_grad_bound)
-            optimizer.step()
+            accumulated += 1
 
-        print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, loss.item()))
+            if accumulated == parser.accum_grad:
+                nn.utils.clip_grad_norm_(model.parameters(), max_grad_bound)
+                optimizer.step()
+                accumulated = 0
+                global_step += 1
+                logged = False
+                checked = False
 
-        if (epoch + 1) % 10 == 0:
-            loss_val = loss.item()
-            filename = 'out/pretrain_encoder_by_batchSize_{}_numPermutations_{}_epochs_{}_loss_{}.pt'.format(
-                batch_size, permutations_k, epoch + 1, int(loss_val * 1000))
-            torch.save(model.state_dict(), filename)
+            if global_step % parser.log_steps and not logged:
+                logged = True
+                log.info('Epoch [{}/{}] | Step {} | Avg Loss:{:.8f}'.format(epoch + 1, parser.num_epochs, global_step, cum_loss/global_step))
+
+            if global_step % parser.save_steps == 0 and not checked:
+                checked = True
+                current_acc = eval(pre_train_val, model, permutations, permutations_k, device, global_step)
+
+                if current_acc > best_acc:
+                    # if new best accuracy
+                    best_acc = current_acc
+                    best_step = global_step
+                    torch.save(model.resnet.state_dict(), filename)
+                    log.info(f"Weights saved to {filename}")
+                else:
+                    # if no improvement
+                    n_no_improve += 1
+                    log.info(f"No Improvement Counter {n_no_improve} out of {parser.patience}")
+
+                    if n_no_improve > parser.patience:
+                        stop = True
+                        log.info(f"Early stop at step {global_step}")
+                        break
+        if stop:
+            break
+
+    log.info('Finished')
+    log.info(f"Best accuracy {best_acc} | Best step {best_step} | Current Step {global_step} | "
+             "Total Epochs {parser.num_epochs} | Best weights saved to {filename}")
 
 
 def get_args():
-    args = argparse.ArgumentParser(description='Deep Learning Competition')
+    repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    args = argparse.ArgumentParser(description='Pretraining')
+
     args.add_argument('--batch_size',
                       type=int,
-                      default=8,
+                      default=2,
                       help='batch size')
     args.add_argument('--permutations_k',
                       type=int,
-                      default=8,
+                      default=9,
                       help='number of image permutations in pre-training.')
+    args.add_argument('--num_epochs',
+                      type=int,
+                      default=2,
+                      help='number of epochs to train')
+    args.add_argument('--accum_grad',
+                      type=int,
+                      default=4,
+                      help='number of gradient accumulation steps')
+    args.add_argument('--data_dir',
+                      type=str,
+                      default=os.getenv('DL_DATA_DIR', os.path.join(repo_dir, "data")),
+                      help='directory with data')
+    args.add_argument('--save_dir',
+                      type=str,
+                      default=os.getenv('DL_RESULTS_DIR', os.path.join(repo_dir, "results")),
+                      help='directory for results')
+    args.add_argument('--experiment',
+                      type=str,
+                      default='default',
+                      help='name of experiment')
+    args.add_argument('--log_steps',
+                      type=int,
+                      default = 100,
+                      help='number of iterations before logging')
+    args.add_argument('--save_steps',
+                      type=int,
+                      default = 500,
+                      help='number of iterations between evaluations')
+    args.add_argument('--patience',
+                      type=int,
+                      default = 5,
+                      help='number of evaluations without improvement before early stop')
+    args.add_argument('--split',
+                      type=float,
+                      default = 0.1,
+                      help='percentage of data for validation')
     return args.parse_args()
 
 
 if __name__ == '__main__':
+    parser = get_args()
 
-    assert torch.cuda.is_available(), 'Exit. Not using GPU.'
+    parser.run_log = os.path.join(parser.save_dir, 'log')
+    if not os.path.exists(parser.run_log):
+        os.mkdir(parser.run_log)
+
+    log_name = os.path.join(parser.run_log, '{}_run_log_{}.log'.format(
+        parser.experiment,
+        dt.now().strftime("%Y%m%d_%H%M")
+    )
+                            )
+    log.basicConfig(filename=log_name,
+                    format='%(asctime)s | %(name)s -- %(message)s',
+                    level=log.DEBUG)
 
     parser = get_args()
 
