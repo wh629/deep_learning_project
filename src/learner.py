@@ -324,7 +324,7 @@ class Learner():
                     log.info("="*40+" Evaluating on step: {}".format(global_step))
                     val_road, val_image = self.evaluate(debug)
                     
-                    log.info("="*40+" Current Val Road {}, Box {}, Step = {} | Previous Best Loss {}, Box {}, Step = {}".format(
+                    log.info("="*40+" Current Val Road {}, Box {}, Step = {} | Previous Best Road {}, Box {}, Step = {}".format(
                         val_road,
                         val_image,
                         global_step,
@@ -379,7 +379,17 @@ class Learner():
             if global_step > self.max_steps or stop:
                 train_iterator.close()
                 break
-            
+
+        if not os.path.exists(best_path):
+            if self.save:
+                # for multi-gpu
+                if isinstance(self.model, nn.DataParallel):
+                    best_state_dict = self.model.module.state_dict()
+                else:
+                    best_state_dict = self.model.state_dict()
+
+                torch.save(best_state_dict, best_path)
+
         # log finished results
         log.info('Finished | Average Training Loss {:.6f} |'\
                  ' Best Val Road ts {} | Best Val Box ats {} | Best Iteration {} | Time Completed {:.2f}s'.format(

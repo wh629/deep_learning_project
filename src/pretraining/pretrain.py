@@ -266,7 +266,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
 
     accumulated = 0
     cum_loss = 0
-    global_step = 0
+    global_step = 1
     logged = False
     checked = False
     best_step = 0
@@ -336,6 +336,10 @@ def pretrain(parser, batch_size=5, permutations_k=64):
                         break
         if stop:
             break
+
+    if not os.path.exists(filename):
+        torch.save(model.resnet.state_dict(), filename)
+        log.info(f"Weights saved to {filename}")
 
     log.info('Finished')
     log.info(f"Best accuracy {best_acc} | Best step {best_step} | Current Step {global_step} | "
