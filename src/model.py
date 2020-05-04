@@ -175,9 +175,10 @@ class Model(nn.Module):
 
         #thin_feature = torch.stack(features_new, dim=1)
         thin_feature = torch.cat(features_new, dim=1)
-        log.info(f"thin_feature shape is {thin_feature.shape}")
         single_feature = self.relu(self.conv_5_1(thin_feature))
         roads = self.fc(single_feature)
+        bs, c, h, w = roads.shape
+        roads = roads.view((bs, h, w))
 
         road_loss = self.road_loss(roads, torch.stack(road_targets, dim=0).int())
 
