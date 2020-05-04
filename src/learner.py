@@ -12,6 +12,7 @@ import copy
 from tqdm import tqdm, trange
 import logging as log
 import time
+from statistics import mean
 
 import helper
 
@@ -194,8 +195,8 @@ class Learner():
         pred_boxes = []
         pred_roads = []
 
-        road_ts = 0
-        box_ats = 0
+        road_ts = []
+        box_ats = []
 
         # stop gradient tracking
         with torch.no_grad():
@@ -214,16 +215,16 @@ class Learner():
                 # out[4] box_loss(for train.o.w. 0)
 
                 for road_map1, road_map2 in zip(pred_roads, inputs['road_targets']):
-                    road_ts += helper.compute_ts_road_map(road_map1, road_map2)
+                    road_ts.append(helper.compute_ts_road_map(road_map1, road_map2))
 
                 for boxes1, boxes2 in zip(pred_boxes, inputs['box_targets']):
-                    box_ats += helper.compute_ats_bounding_boxes(boxes1, boxes2['bounding_box'])
+                    box_ats.append(helper.compute_ats_bounding_boxes(boxes1, boxes2['bounding_box']))
 
                 if i==1 and debug:
                     log.info('Debug')
                     break
 
-        return road_ts.mean(), box_ats.mean()
+        return mean(road_ts), mean(box_ats)
         
     def train(self,
               optimizer = None,  # optimizer to use for training
