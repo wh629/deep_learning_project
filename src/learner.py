@@ -214,6 +214,9 @@ class Learner():
                 # out[3] road_loss
                 # out[4] box_loss(for train.o.w. 0)
 
+                pred_boxes = out[1]
+                pred_roads = out[2]
+
                 for road_map1, road_map2 in zip(pred_roads, inputs['road_targets']):
                     road_ts.append(helper.compute_ts_road_map(road_map1, road_map2).item())
 
@@ -225,8 +228,12 @@ class Learner():
                     break
 
         if debug:
-            log.info(f"{road_ts}")
-            log.info(f"{box_ats}")
+            log.info(f"Predicted roads is {pred_roads}")
+            log.info(f"True roads is {inputs['road_targets']}")
+            log.info(f"Road ts array is {road_ts}")
+            log.info(f"Predicted roads is {pred_boxes}")
+            log.info(f"True roads is {inputs['box_targets']}")
+            log.info(f"Box ats array is {box_ats}")
 
         return mean(road_ts), mean(box_ats)
         
