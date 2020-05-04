@@ -223,7 +223,7 @@ class Learner():
                 for boxes1, boxes2 in zip(pred_boxes, inputs['box_targets']):
                     box_ats.append(helper.compute_ats_bounding_boxes(boxes1, boxes2['bounding_box']).item())
 
-                if i==1 and debug:
+                if i==0 and debug:
                     log.info('Debug')
                     break
 
@@ -292,7 +292,7 @@ class Learner():
         log.info("Training with {} iterations; ~ {} epochs".format(self.max_steps, max_epochs))
 
         # train
-        global_step = 0
+        global_step = 1
         accumulated = 0
         checked = False
         logged = False
