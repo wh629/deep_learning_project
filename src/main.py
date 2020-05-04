@@ -99,7 +99,7 @@ def main():
                               )
 
     # train model
-    results = trainer.train(labeled = not parser.no_label)
+    results = trainer.train(labeled = not parser.no_label, debug = parser.debug)
 
     results["experiment"] = parser.experiment
     

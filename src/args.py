@@ -115,6 +115,10 @@ args.add_argument('--patience',
                   default=5,
                   help='number of checks without improvement before early stop')
 
+args.add_argument('--debug',
+                  action='store_true',
+                  help='whether debug mode')
+
 def check_args(parser):
     """
     make sure directories exist

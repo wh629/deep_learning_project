@@ -218,12 +218,17 @@ class Learner():
                 for boxes1, boxes2 in zip(pred_boxes, inputs['box_targets']):
                     box_ats += helper.compute_ats_bounding_boxes(boxes1, boxes2['bounding_box'])
 
+                if i==1 and debug:
+                    log.info('Debug')
+                    break
+
         return road_ts.mean(), box_ats.mean()
         
     def train(self,
               optimizer = None,  # optimizer to use for training
               scheduler = None,  # scheduler to use for training
               labeled = True,    # whether training on labeled data
+              debug = True,
               ):
         """
         Fine-tune model on task
@@ -305,7 +310,7 @@ class Learner():
                 if global_step % self.best_int == 0 and not checked:
                     checked = True
                     log.info("="*40+" Evaluating on step: {}".format(global_step))
-                    val_results, val_road, val_image = self.evaluate()
+                    val_results, val_road, val_image = self.evaluate(debug)
                     
                     log.info("="*40+" Current Val Loss {}, Step = {} | Previous Best Loss {}, Step = {}".format(
                         val_results,
