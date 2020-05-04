@@ -8,6 +8,7 @@ from shared_settings import decode_exp_name
 
 def collect_results(args):
     results = {
+        "preload" : [],
         "learning_rate": [],
         "batch_size": [],
         "max_steps": [],
@@ -24,7 +25,8 @@ def collect_results(args):
     }
 
     def record_exp(one_exp_result):
-        lr, bs, max_epochs, seed = decode_exp_name(one_exp_result["exp_name"])
+        preload, lr, bs, max_epochs, seed = decode_exp_name(one_exp_result["exp_name"])
+        results["preload"].append(preload)
         results["learning_rate"].append(lr)
         results["batch_size"].append(bs)
         results["max_steps"].append(max_epochs)

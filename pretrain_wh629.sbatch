@@ -24,7 +24,7 @@ export DL_RESULTS_DIR=${PROJECT}/results
 
 python /src/pretraining/pretrain.py \
       --batch_size 2 \
-      --permutations_k 9 \
+      --permutations_k 35 \
       --num_epochs 2 \
       --accum_grad 4 \
       --experiment ${EXPERIMENT} \

@@ -38,33 +38,70 @@ def repackage_image_batch(samples: torch.Tensor):
         samples_new.append(nn.functional.interpolate(sample, size=(800, 800), mode='nearest'))  #resize
     return torch.stack(samples_new, dim=0)
 
+def get_hamming_distance(perm_i, perm_j):
+    return sum([e1 != e2 for e1, e2 in zip(perm_i, perm_j)])
+
 def get_k_permutations_of_n_elements(k, n):
     """
     Generate k random unique permutations of n elements. These k permutations are better to have long hamming distances.
     """
     perms_available = list(itertools.permutations(range(n)))
-    perms_output = [perms_available.pop(random.randint(0, len(perms_available) - 1))]
 
-    distance_mapping = {}
-    while len(perms_output) < k:
-        dists = []
-        for perm_i in perms_available:
-            dist_i = 0
-            for perm_j in perms_output:
-                if (perm_i, perm_j) in distance_mapping:
-                    dist_i += distance_mapping[(perm_i, perm_j)]
-                else:
-                    dist_ij = sum([e1 != e2 for e1, e2 in zip(perm_i, perm_j)])  # hamming distance
-                    dist_i += dist_ij
-                    distance_mapping[(perm_i, perm_j)] = dist_ij
-                    distance_mapping[(perm_j, perm_i)] = dist_ij
+    # shuffle permutations
+    random.shuffle(perms_available)
+    perms_output = []
+    t = range(n)
+    threshold = n - 2
 
-            dists.append(dist_i)
+    for perm in perms_available:
+        if len(perms_output) == k:
+            break
+        d_true = get_hamming_distance(perm, t)
 
-        idx_max = dists.index(max(dists))
-        perms_output.append(perms_available.pop(idx_max))
+        # include permutation only if hamming distance from original is at least threshold
+        if d_true >= threshold:
 
-    return perms_output
+            # include permutation only if hamming distance with all included is at least threshold
+            add = True
+            for included in perms_output:
+                d = get_hamming_distance(perm, included)
+                if d_true < threshold:
+                    add = False
+
+            if add:
+                perms_output.append(perm)
+
+    # get average hamming distance
+    running = 0
+    for i, perm_i in enumerate(perms_output):
+        run_i = 0
+        for j, perm_j in enumerate(perms_output):
+            if i != j:
+                run_i += get_hamming_distance(perm_i, perm_j)
+
+        running += run_i/(len(perms_output)-1)
+
+
+    # distance_mapping = {}
+    # while len(perms_output) < k:
+    #     dists = []
+    #     for perm_i in perms_available:
+    #         dist_i = 0
+    #         for perm_j in perms_output:
+    #             if (perm_i, perm_j) in distance_mapping:
+    #                 dist_i += distance_mapping[(perm_i, perm_j)]
+    #             else:
+    #                 dist_ij = sum([e1 != e2 for e1, e2 in zip(perm_i, perm_j)])  # hamming distance
+    #                 dist_i += dist_ij
+    #                 distance_mapping[(perm_i, perm_j)] = dist_ij
+    #                 distance_mapping[(perm_j, perm_i)] = dist_ij
+    #
+    #         dists.append(dist_i)
+    #
+    #     idx_max = dists.index(max(dists))
+    #     perms_output.append(perms_available.pop(idx_max))
+
+    return perms_output, running/len(perms_output)
 
 
 class CameraEncoder(nn.Module):
@@ -175,13 +212,6 @@ def pretrain(batch_size=5, permutations_k=64):
 
     print('Start pre-training, batch_size = {}, permutations_k = {}'.format(batch_size, permutations_k))
 
-    # pre-training tasks aim to restore the original image order.
-    permutations = get_k_permutations_of_n_elements(k=permutations_k, n=6)
-
-    # Set up your device
-    cuda = torch.cuda.is_available()
-    device = torch.device("cuda:0" if cuda else "cpu")
-
     random.seed(0)
     np.random.seed(0)
     torch.manual_seed(0)
@@ -190,6 +220,15 @@ def pretrain(batch_size=5, permutations_k=64):
         torch.cuda.manual_seed_all(0)
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
+
+    # pre-training tasks aim to restore the original image order.
+    permutations, avg_hamming = get_k_permutations_of_n_elements(k=permutations_k, n=6)
+
+    # Set up your device
+    cuda = torch.cuda.is_available()
+    device = torch.device("cuda:0" if cuda else "cpu")
+
+
 
     pretrain_scene_index = np.arange(106)
 
@@ -296,7 +335,8 @@ def pretrain(batch_size=5, permutations_k=64):
 
     log.info('Finished')
     log.info(f"Best accuracy {best_acc} | Best step {best_step} | Current Step {global_step} | "
-             "Total Epochs {parser.num_epochs} | Best weights saved to {filename}")
+             f"Number of Permutations {permutations_k} | Avg Hamming {avg_hamming} | "
+             f"Total Epochs {parser.num_epochs} | Best weights saved to {filename}")
 
 
 def get_args():
@@ -310,7 +350,7 @@ def get_args():
                       help='batch size')
     args.add_argument('--permutations_k',
                       type=int,
-                      default=9,
+                      default=35,
                       help='number of image permutations in pre-training.')
     args.add_argument('--num_epochs',
                       type=int,
