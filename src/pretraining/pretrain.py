@@ -10,7 +10,7 @@ import torchvision
 import logging as log
 from datetime import datetime as dt
 
-from pretraining.data_helper import UnlabeledDataset
+from data_helper import UnlabeledDataset
 
 
 # def combine_6_images(sample):
@@ -207,10 +207,14 @@ def eval(loader, model, permutations, permutations_k, device, idx):
     model.train()
     return correct/len(loader.dataset) # returns the accuracy
 
-def pretrain(batch_size=5, permutations_k=64):
+def pretrain(parser, batch_size=5, permutations_k=64):
     max_grad_bound = 1
 
     print('Start pre-training, batch_size = {}, permutations_k = {}'.format(batch_size, permutations_k))
+
+    # Set up your device
+    cuda = torch.cuda.is_available()
+    device = torch.device("cuda:0" if cuda else "cpu")
 
     random.seed(0)
     np.random.seed(0)
@@ -223,12 +227,6 @@ def pretrain(batch_size=5, permutations_k=64):
 
     # pre-training tasks aim to restore the original image order.
     permutations, avg_hamming = get_k_permutations_of_n_elements(k=permutations_k, n=6)
-
-    # Set up your device
-    cuda = torch.cuda.is_available()
-    device = torch.device("cuda:0" if cuda else "cpu")
-
-
 
     pretrain_scene_index = np.arange(106)
 
@@ -388,6 +386,10 @@ def get_args():
                       type=float,
                       default = 0.1,
                       help='percentage of data for validation')
+    args.add_argument('--lr',
+                      type=float,
+                      default = 0.1,
+                      help='learning rate')
     return args.parse_args()
 
 
@@ -409,4 +411,4 @@ if __name__ == '__main__':
 
     parser = get_args()
 
-    pretrain(parser.batch_size, parser.permutations_k)
+    pretrain(parser, parser.batch_size, parser.permutations_k)

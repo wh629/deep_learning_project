@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 import torchvision
 
-from pretraining.helper import convert_map_to_lane_map, convert_map_to_road_map
+from helper import convert_map_to_lane_map, convert_map_to_road_map
 
 NUM_SAMPLE_PER_SCENE = 126
 NUM_IMAGE_PER_SAMPLE = 6

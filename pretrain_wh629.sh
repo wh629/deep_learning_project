@@ -10,7 +10,7 @@ PROJECT=/scratch/wh629/dl/project           # set to your project directory
 export DL_DATA_DIR=${PROJECT}/data
 export DL_RESULTS_DIR=${PROJECT}/results
 
-python /src/pretraining/pretrain.py \
+python ./src/pretraining/pretrain.py \
       --batch_size 2 \
       --permutations_k 35 \
       --num_epochs 2 \
@@ -19,4 +19,5 @@ python /src/pretraining/pretrain.py \
       --log_steps 100 \
       --save_steps 500 \
       --patience 5 \
-      --split 0.2
+      --lr 0.1 \
+      --split 0.1
