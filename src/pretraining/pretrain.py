@@ -105,7 +105,7 @@ def get_k_permutations_of_n_elements(k, n):
 
 
 class CameraEncoder(nn.Module):
-    def __init__(self, permutations_k=8, hidden_size=1024):
+    def __init__(self, permutations_k=8, hidden_size=4096):
         super().__init__()
 
         self.image_detect = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False,
@@ -114,7 +114,10 @@ class CameraEncoder(nn.Module):
                                                                                  pretrained_backbone=False)
 
         self.resnet = self.image_detect.backbone
-        self.conv_256_1 = nn.Conv2d(in_channels=256, out_channels=1, kernel_size=3, stride=1, padding=1)
+        for param in self.resnet.parameters():
+            param.requires_grad = True
+
+        self.conv_256_1 = nn.Conv2d(in_channels=256, out_channels=1, kernel_size=1, stride=1)
         self.double_dim_minus1 = nn.ConvTranspose2d(in_channels=256, out_channels=256, kernel_size=3, stride=2,
                                                     padding=1)
         self.relu = nn.ReLU()
@@ -122,10 +125,16 @@ class CameraEncoder(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d((self.target_size, self.target_size))
 
         self.decoder = nn.Sequential(
-            nn.Linear(6*5*self.target_size*self.target_size, hidden_size),
+            nn.Linear(6 * 25 * 25, hidden_size),
             nn.ReLU(),
             nn.Linear(hidden_size, permutations_k)
         )
+
+        # self.decoder = nn.Sequential(
+        #     nn.Linear(6*5*self.target_size*self.target_size, hidden_size),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_size, permutations_k)
+        # )
 
     def forward(self, x):
         # first apply resnet to each of 6 images for all samples in current batch
@@ -144,20 +153,23 @@ class CameraEncoder(nn.Module):
         for features in xs:
             features_new = []
             for key, feature in features.items():
-                temp = self.relu(self.avg_pool(feature))
-                features_new.append(self.relu(self.conv_256_1(temp).view(bs, -1)))
-                # list with entries of (batch_size, 10*10)
+                # try just with pool layer
+                features_new.append(self.relu(self.conv_256_1(feature).view(bs, -1)))
 
-            # thin_feature for single image
-            thin_feature = torch.cat(features_new, dim=1)
-            # size (batch_size, 5*10*10 = 500)
-
-            # for each image
-            xs_new.append(thin_feature)
-            # entries of xs_new are (batch_size, 500)
+            #     temp = self.relu(self.avg_pool(feature))
+            #     features_new.append(self.relu(self.conv_256_1(temp).view(bs, -1)))
+            #     # list with entries of (batch_size, out_dim*out_dim)
+            #
+            # # thin_feature for single image
+            # thin_feature = torch.cat(features_new, dim=1)
+            # # size (batch_size, 5*10*10 = 500)
+            #
+            # # for each image
+            # xs_new.append(thin_feature)
+            # # entries of xs_new are (batch_size, 500)
 
         # combined images
-        # (batch_size, 3000)
+        # (batch_size, 6*25*25)
         x = torch.cat(xs_new, dim=1)
 
         # feed into decoder of fc layers
@@ -203,7 +215,7 @@ def eval(loader, model, permutations, permutations_k, device, idx, debug):
             batch = batch.to(device)
             output, pred = model(batch)
 
-            correct += torch.eq(pred, answers).sum()
+            correct += torch.eq(pred.float(), answers.float()).sum().item()
 
             if i == 1 and debug:
                 log.info("Debug break evaluation")
@@ -273,6 +285,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
     best_acc = 0
     stop = False
     n_no_improve = 0
+    saved = False
 
     filename = os.path.join(parser.save_dir, f"{parser.experiment}_best.pt")
 
@@ -325,6 +338,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
                     best_step = global_step
                     torch.save(model.resnet.state_dict(), filename)
                     log.info(f"Weights saved to {filename}")
+                    saved = True
                 else:
                     # if no improvement
                     n_no_improve += 1
@@ -337,7 +351,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
         if stop:
             break
 
-    if not os.path.exists(filename):
+    if not os.path.exists(filename) and not saved:
         torch.save(model.resnet.state_dict(), filename)
         log.info(f"Weights saved to {filename}")
 

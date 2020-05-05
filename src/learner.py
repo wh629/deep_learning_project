@@ -276,6 +276,7 @@ class Learner():
         exp_log_dir = os.path.join(self.log_dir, self.experiment_name)
         stop = False
         no_improve = 0
+        saved = False
 
         if self.save:
             # make directory for model weights for given task if doesn't exist
@@ -351,6 +352,8 @@ class Learner():
                             
                             torch.save(best_state_dict, best_path)
                             os.chmod(best_path, self.access_mode)
+                            saved = True
+                            log.info(f"Saved weights to {best_path}")
                     else:
                         no_improve += 1
                         if no_improve >= self.patience:
@@ -380,7 +383,7 @@ class Learner():
                 train_iterator.close()
                 break
 
-        if not os.path.exists(best_path):
+        if not os.path.exists(best_path) and not saved:
             if self.save:
                 # for multi-gpu
                 if isinstance(self.model, nn.DataParallel):
@@ -389,6 +392,7 @@ class Learner():
                     best_state_dict = self.model.state_dict()
 
                 torch.save(best_state_dict, best_path)
+                log.info(f"Saved weights to {best_path}")
 
         # log finished results
         log.info('Finished | Average Training Loss {:.6f} |'\
