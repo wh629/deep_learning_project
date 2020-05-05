@@ -168,7 +168,7 @@ class CameraEncoder(nn.Module):
             # size (batch_size, 5*10*10 = 500)
 
             # for each image
-            xs_new.append(thin_feature)
+            # xs_new.append(thin_feature)
             # entries of xs_new are [batch_size, 13*13]
 
         # combined images
