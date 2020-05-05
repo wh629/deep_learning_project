@@ -151,7 +151,7 @@ class CameraEncoder(nn.Module):
 
         xs_new = []
         for features in xs:
-            xs_new.append(self.relu(self.conv_256_1(feature['pool']).view(bs, -1)))
+            xs_new.append(self.relu(self.conv_256_1(features['pool']).view(bs, -1)))
             # [batch_size, 13*13]
 
             # features_new = []
