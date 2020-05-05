@@ -125,7 +125,7 @@ class CameraEncoder(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d((self.target_size, self.target_size))
 
         self.decoder = nn.Sequential(
-            nn.Linear(6 * 25 * 25, hidden_size),
+            nn.Linear(6 * 13 * 13, hidden_size),
             nn.ReLU(),
             nn.Linear(hidden_size, permutations_k)
         )
@@ -151,25 +151,28 @@ class CameraEncoder(nn.Module):
 
         xs_new = []
         for features in xs:
-            features_new = []
-            for key, feature in features.items():
-                # try just with pool layer
-                features_new.append(self.relu(self.conv_256_1(feature).view(bs, -1)))
+            features_new.append(self.relu(self.conv_256_1(feature['pool']).view(bs, -1)))
+            # [batch_size, 13*13]
+
+            # features_new = []
+            # for key, feature in features.items():
+            #     # try just with pool layer
+            #     features_new.append(self.relu(self.conv_256_1(feature).view(bs, -1)))
 
             #     temp = self.relu(self.avg_pool(feature))
             #     features_new.append(self.relu(self.conv_256_1(temp).view(bs, -1)))
             #     # list with entries of (batch_size, out_dim*out_dim)
             #
             # thin_feature for single image
-            thin_feature = torch.cat(features_new, dim=1)
+            # thin_feature = torch.cat(features_new, dim=1)
             # size (batch_size, 5*10*10 = 500)
 
             # for each image
             xs_new.append(thin_feature)
-            # entries of xs_new are (batch_size, 500)
+            # entries of xs_new are [batch_size, 13*13]
 
         # combined images
-        # (batch_size, 6*25*25)
+        # (batch_size, 6*13*13)
         x = torch.cat(xs_new, dim=1)
 
         # feed into decoder of fc layers
