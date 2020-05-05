@@ -331,6 +331,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
             if global_step % parser.save_steps == 0 and not checked:
                 checked = True
                 current_acc = eval(pre_train_val, model, permutations, permutations_k, device, global_step, parser.debug)
+                log.info(f"Current Acc {current_acc} | Current Step {global_step} | Previous Best {best_acc} | Best Step {best_step}")
 
                 if current_acc > best_acc:
                     # if new best accuracy
