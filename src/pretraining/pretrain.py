@@ -160,13 +160,13 @@ class CameraEncoder(nn.Module):
             #     features_new.append(self.relu(self.conv_256_1(temp).view(bs, -1)))
             #     # list with entries of (batch_size, out_dim*out_dim)
             #
-            # # thin_feature for single image
-            # thin_feature = torch.cat(features_new, dim=1)
-            # # size (batch_size, 5*10*10 = 500)
-            #
-            # # for each image
-            # xs_new.append(thin_feature)
-            # # entries of xs_new are (batch_size, 500)
+            # thin_feature for single image
+            thin_feature = torch.cat(features_new, dim=1)
+            # size (batch_size, 5*10*10 = 500)
+
+            # for each image
+            xs_new.append(thin_feature)
+            # entries of xs_new are (batch_size, 500)
 
         # combined images
         # (batch_size, 6*25*25)
