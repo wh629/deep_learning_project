@@ -102,18 +102,34 @@ class Learner():
         """
         Labeled Data Batch: image, target, road_image, extra
         Unlabeled Data Batch: image, camera_index
+
+        batch[0] <tuple> : images
+        batch[1] <tuple> : targets with keys 'bounding_box' and 'category'
+        batch[2] <tuple> : road map
+
         --------------------
         Returns:
         Dictionary of batch information with keys as model keywords
 
         """
-        
+        # move to self.device
+        image_moved = []
+        for image in batch[0]:
+            image_moved.append(image.to(self.device))
+
         if self.labeled:
-            inputs = {"images"       : batch[0],
-                      "box_targets"  : batch[1],
-                      "road_targets" : batch[2]}
+            targets_moved = []
+            road_moved = []
+
+            for target, road in zip(batch[1], batch[2]):
+                road_moved.append(road.to(self.device))
+                targets_moved.append({key: value.to(self.device) for key, value in target.items()})
+
+            inputs = {"images"       : image_moved,
+                      "box_targets"  : targets_moved,
+                      "road_targets" : road_moved}
         else:
-            inputs = {"images"       : batch[0]}
+            inputs = {"images"       : image_moved}
         
         return inputs
         
