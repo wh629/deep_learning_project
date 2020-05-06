@@ -181,13 +181,17 @@ class Model(nn.Module):
         bs, c, h, w = roads.shape
         roads = roads.view((bs, h, w))
 
-        road_loss = self.road_loss(roads, torch.stack(road_targets, dim=0).float())
+        if road_targets is not None:
+            road_loss = self.road_loss(roads, torch.stack(road_targets, dim=0).float())
+        else:
+            road_loss = 0
 
         # Calculate losses if applicable
         loss = self.road_lambda*road_loss + self.box_lambda*box_loss
 
         # repackage bounding boxes
         boxes = [get_boxes_from_2_points_to_4_points(boxes_i['boxes']) for boxes_i in rcnn_boxes]
+        boxes_tensor = torch.stack(boxes, dim=0)
 
         # repackage roads
         b_roads = self.sig(roads) > self.threshold
@@ -199,5 +203,6 @@ class Model(nn.Module):
         out.append(b_roads)
         out.append(road_loss)
         out.append(box_loss)
+        out.append(boxes_tensor)
 
         return out
