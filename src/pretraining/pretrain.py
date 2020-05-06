@@ -316,7 +316,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
             if accumulated == 0:
                 model.zero_grad()
 
-            assert type(loss) == float, f"Loss {loss} is not a float and is {type(loss)}."
+            assert type(loss.item()) == float, f"Loss {loss} is not a float and is {type(loss)}."
             loss.backward()
             accumulated += 1
             nn.utils.clip_grad_norm_(model.parameters(), max_grad_bound)
