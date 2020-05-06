@@ -196,36 +196,44 @@ def generate_random_image_mask(channels, height, width):
 
     return mask
 
-def eval(loader, model, permutations, permutations_k, device, idx, debug):
+def evaluate(val_batches, val_answers, model, device, idx, debug):
     log.info(f"Evaluating at step {idx}")
     model.eval()
     correct = 0
     with torch.no_grad():
-        for i, batch_old in enumerate(tqdm(loader, desc='Eval', mininterval=30)):
-            batch = repackage_image_batch(batch_old)
-
-            batch_size_now = batch.shape[0]
-            # generate answers
-            answers = torch.randint(permutations_k, (batch_size_now,)).to(device)
-
-            # prepare input
-            for ith in range(batch_size_now):
-                batch[ith] = batch[ith, permutations[answers[ith].item()]]
-                for jth in range(6):
-                    random_mask = generate_random_image_mask(*batch[0, 0].shape)
-                    batch[ith, jth] *= random_mask
-
-            batch = batch.to(device)
+        for i, batch, answer in enumerate(tqdm(zip(val_batches, val_answers), desc='Eval', mininterval=30)):
+            batch, answer = batch.to(device), answer.to(device)
             output, pred = model(batch)
 
-            correct += torch.eq(pred.float(), answers.float()).sum().item()
+            correct += torch.eq(pred.float(), answer.float()).sum().item()
 
             if i == 1 and debug:
                 log.info("Debug break evaluation")
                 break
 
     model.train()
-    return correct/len(loader.dataset) # returns the accuracy
+    return correct/len(val_batches) # returns the accuracy
+
+def get_val_perms(loader, permutations, permutations_k):
+    batches = []
+    answers = []
+
+    with torch.no_grad():
+        for i, batch_old in enumerate(tqdm(loader, desc='Eval', mininterval=30)):
+            batch = repackage_image_batch(batch_old)
+
+            batch_size_now = batch.shape[0]
+            # generate answers
+            answer = torch.randint(permutations_k, (batch_size_now,))
+
+            # prepare input
+            for ith in range(batch_size_now):
+                batch[ith] = batch[ith, permutations[answer[ith].item()]]
+
+            batches.append(batch)
+            answers.append(answer)
+
+    return batches, answers
 
 def pretrain(parser, batch_size=5, permutations_k=64):
     max_grad_bound = 1
@@ -274,6 +282,8 @@ def pretrain(parser, batch_size=5, permutations_k=64):
                                                 shuffle=False,
                                                 num_workers=2)
 
+    val_batches, val_answers = get_val_perms(pre_train_val, permutations, permutations_k)
+
     model = CameraEncoder(permutations_k).to(device)
 
     criterion = nn.CrossEntropyLoss()
@@ -285,7 +295,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
     logged = False
     checked = False
     best_step = 0
-    best_acc = 0
+    best_acc = -1
     stop = False
     n_no_improve = 0
     saved = False
@@ -316,7 +326,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
             if accumulated == 0:
                 model.zero_grad()
 
-            assert type(loss) == float, f"Loss {loss} is not a float and is {type(loss)}."
+            assert type(loss.item()) == float, f"Loss {loss} is not a float and is {type(loss)}."
             loss.backward()
             accumulated += 1
             nn.utils.clip_grad_norm_(model.parameters(), max_grad_bound)
@@ -331,20 +341,22 @@ def pretrain(parser, batch_size=5, permutations_k=64):
             if global_step % parser.log_steps == 0 and not logged:
                 logged = True
                 log.info('Epoch [{}/{}] | Step {} | Avg Loss:{:.8f}'.format(epoch + 1, parser.num_epochs, global_step, cum_loss/global_step))
+                log.info(f"Logit example is {output[0,0]}")
 
             if global_step % parser.save_steps == 0 and not checked:
                 checked = True
-                current_acc = eval(pre_train_val, model, permutations, permutations_k, device, global_step, parser.debug)
+                current_acc = evaluate(val_batches, val_answers, model, device, global_step, parser.debug)
                 log.info(f"Current Acc {current_acc} | Current Step {global_step} | Previous Best {best_acc} | Best Step {best_step}")
 
-                if current_acc > best_acc:
+                if current_acc >= best_acc:
                     # if new best accuracy
                     best_acc = current_acc
                     best_step = global_step
                     torch.save(model.resnet.state_dict(), filename)
                     log.info(f"Weights saved to {filename}")
                     saved = True
-                else:
+
+                if current_acc <= best_acc:
                     # if no improvement
                     n_no_improve += 1
                     log.info(f"No Improvement Counter {n_no_improve} out of {parser.patience}")
@@ -439,7 +451,7 @@ if __name__ == '__main__':
                             )
     log.basicConfig(filename=log_name,
                     format='%(asctime)s | %(name)s -- %(message)s',
-                    level=log.DEBUG)
+                    level=log.INFO)
 
     parser = get_args()
 
