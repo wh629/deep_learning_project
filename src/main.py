@@ -44,7 +44,7 @@ def main():
     )
     log.basicConfig(filename=log_name,
                     format='%(asctime)s | %(name)s -- %(message)s',
-                    level=log.DEBUG)
+                    level=log.INFO)
     os.chmod(log_name, parser.access_mode)
     
     # set devise to CPU if available

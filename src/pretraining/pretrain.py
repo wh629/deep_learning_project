@@ -439,7 +439,7 @@ if __name__ == '__main__':
                             )
     log.basicConfig(filename=log_name,
                     format='%(asctime)s | %(name)s -- %(message)s',
-                    level=log.DEBUG)
+                    level=log.INFO)
 
     parser = get_args()
 
