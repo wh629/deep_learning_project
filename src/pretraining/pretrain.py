@@ -285,7 +285,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
     logged = False
     checked = False
     best_step = 0
-    best_acc = 0
+    best_acc = -1
     stop = False
     n_no_improve = 0
     saved = False
@@ -337,14 +337,15 @@ def pretrain(parser, batch_size=5, permutations_k=64):
                 current_acc = eval(pre_train_val, model, permutations, permutations_k, device, global_step, parser.debug)
                 log.info(f"Current Acc {current_acc} | Current Step {global_step} | Previous Best {best_acc} | Best Step {best_step}")
 
-                if current_acc > best_acc:
+                if current_acc >= best_acc:
                     # if new best accuracy
                     best_acc = current_acc
                     best_step = global_step
                     torch.save(model.resnet.state_dict(), filename)
                     log.info(f"Weights saved to {filename}")
                     saved = True
-                else:
+
+                if current_acc <= best_acc:
                     # if no improvement
                     n_no_improve += 1
                     log.info(f"No Improvement Counter {n_no_improve} out of {parser.patience}")

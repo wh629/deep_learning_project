@@ -285,8 +285,8 @@ class Learner():
         cum_loss =  0.0
         cum_road_loss = 0.0
         cum_box_loss = 0.0
-        best_val_road = 0.0
-        best_val_image = 0.0
+        best_val_road = -1
+        best_val_image = -1
         best_iter = 0
         exp_log_dir = os.path.join(self.log_dir, self.experiment_name)
         stop = False
@@ -357,7 +357,7 @@ class Learner():
                         best_val_image = val_image
 
                     # save if either best evaluation metric saved
-                    if val_road > best_val_road or val_image > best_val_image:
+                    if val_road >= best_val_road or val_image >= best_val_image:
                         if self.save:
                             # for multi-gpu
                             if isinstance(self.model, nn.DataParallel):
@@ -369,8 +369,10 @@ class Learner():
                             os.chmod(best_path, self.access_mode)
                             saved = True
                             log.info(f"Saved weights to {best_path}")
-                    else:
+
+                    if val_road <= best_val_road or val_image <= best_val_image:
                         no_improve += 1
+                        log.info('='*40+f" No improvement counter {no_improve} our of {self.patience}"+'='*40)
                         if no_improve >= self.patience:
                             log.info('='*40+' Early stopping at step {} '.format(global_step)+'='*40)
                             stop = True
