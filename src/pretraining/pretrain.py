@@ -328,7 +328,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
                 logged = False
                 checked = False
 
-            if global_step % parser.log_steps and not logged:
+            if global_step % parser.log_steps == 0 and not logged:
                 logged = True
                 log.info('Epoch [{}/{}] | Step {} | Avg Loss:{:.8f}'.format(epoch + 1, parser.num_epochs, global_step, cum_loss/global_step))
 
