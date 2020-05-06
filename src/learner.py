@@ -177,14 +177,13 @@ class Learner():
         
         # calculate gradients through back prop
         l.backward()
-        
+        if self.max_grad_norm > 0:
+            nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+
         accumulated += 1
         
         # clip gradients
         if accumulated == self.accumulate_int:
-            if self.max_grad_norm > 0:
-                nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
-            
             #take a step in gradient descent
             optimizer.step()
             scheduler.step()
