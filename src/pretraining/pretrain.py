@@ -319,9 +319,9 @@ def pretrain(parser, batch_size=5, permutations_k=64):
             assert type(loss) == float, f"Loss {loss} is not a float and is {type(loss)}."
             loss.backward()
             accumulated += 1
+            nn.utils.clip_grad_norm_(model.parameters(), max_grad_bound)
 
             if accumulated == parser.accum_grad:
-                nn.utils.clip_grad_norm_(model.parameters(), max_grad_bound)
                 optimizer.step()
                 accumulated = 0
                 global_step += 1
