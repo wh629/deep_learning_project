@@ -20,4 +20,5 @@ python ./src/pretraining/pretrain.py \
       --save_steps 1 \
       --patience 1 \
       --lr 0.1 \
-      --split 0.1
+      --split 0.1 \
+      --debug
