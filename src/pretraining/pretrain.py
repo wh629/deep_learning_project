@@ -344,6 +344,8 @@ def pretrain(parser, batch_size=5, permutations_k=64):
                 logged = True
                 log.info('Epoch [{}/{}] | Step {} | Avg Loss:{:.8f}'.format(epoch + 1, parser.num_epochs, global_step, cum_loss/global_step))
                 log.info(f"Logit example is {output[0,0]}")
+                torch.save(model.resnet.state_dict(), filename)
+                log.info(f"Weights saved to {filename}")
 
             if global_step % parser.save_steps == 0 and not checked:
                 checked = True
