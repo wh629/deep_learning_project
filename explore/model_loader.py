@@ -35,12 +35,13 @@ class ModelLoader():
         # self.model = ...
         # 
         self.model = model.Model()
+        self.model.load_state_dict(torch.load(model_file, map_location='cpu'))
 
-        if torch.cuda.is_available():
-            self.model.load_state_dict(torch.load(model_file))
-            self.model.cuda()
-        else:
-            self.model.load_state_dict(torch.load(model_file, map_location='cpu'))
+        # if torch.cuda.is_available():
+        #     self.model.load_state_dict(torch.load(model_file))
+        #     self.model.cuda()
+        # else:
+        #     self.model.load_state_dict(torch.load(model_file, map_location='cpu'))
         self.model.eval()
 
     def get_bounding_boxes(self, samples):
