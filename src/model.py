@@ -195,7 +195,12 @@ class Model(nn.Module):
 
         # repackage bounding boxes
         boxes = [get_boxes_from_2_points_to_4_points(boxes_i['boxes']) for boxes_i in rcnn_boxes]
-        boxes_tensor = torch.stack(boxes, dim=0)
+
+        # set boxes_tensor to empty tensor if no predictions
+        if len(boxes) > 0:
+            boxes_tensor = torch.stack(boxes, dim=0)
+        else:
+            boxes_tensor = torch.empty(0)
 
         # repackage roads
         b_roads = self.sig(roads) > self.threshold
