@@ -201,8 +201,10 @@ def evaluate(val_batches, val_answers, model, device, idx, debug):
     model.eval()
     correct = 0
     with torch.no_grad():
-        for i, batch, answer in enumerate(tqdm(zip(val_batches, val_answers), desc='Eval', mininterval=30)):
-            batch, answer = batch.to(device), answer.to(device)
+        for i in trange(0, len(val_batches), desc='Epochs', mininterval = 30):
+            batch = val_batches[i].to(device)
+            answer = val_answers[i].to(device)
+            
             output, pred = model(batch)
 
             correct += torch.eq(pred.float(), answer.float()).sum().item()
