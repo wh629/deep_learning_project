@@ -7,7 +7,7 @@
 #SBATCH --time=48:00:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=hp1326@nyu.edu
-#SBATCH --mem=32000
+#SBATCH --mem=64000
 #SBATCH --job-name=dl_pre
 #SBATCH --output=/scratch/hp1326/pretrain_%j.out
 
