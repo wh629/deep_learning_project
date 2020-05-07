@@ -207,6 +207,9 @@ class Learner():
         # puts model in evaluation mode
         self.model.eval()
 
+        avg_road_ts = 0
+        avg_box_ats = 0
+
         pred_boxes = []
         pred_roads = []
 
@@ -250,7 +253,13 @@ class Learner():
             log.info(f"True roads is {inputs['box_targets']}")
             log.info(f"Box ats array is {box_ats}")
 
-        return mean(road_ts), mean(box_ats)
+        if len(road_ts) > 0:
+            avg_road_ts = mean(road_ts)
+
+        if len(box_ats) > 0:
+            avg_box_ats = mean(box_ats)
+
+        return avg_road_ts, avg_box_ats
         
     def train(self,
               optimizer = None,  # optimizer to use for training
@@ -370,7 +379,7 @@ class Learner():
                             saved = True
                             log.info(f"Saved weights to {best_path}")
 
-                    if val_road <= best_val_road or val_image <= best_val_image:
+                    if val_road <= best_val_road and val_image <= best_val_image:
                         no_improve += 1
                         log.info('='*40+f" No improvement counter {no_improve} our of {self.patience}"+'='*40)
                         if no_improve >= self.patience:
@@ -391,6 +400,17 @@ class Learner():
                                  best_iter)
                         )
                     log.info('='*40+' Box Loss {} | Road Loss {} '.format(cum_road_loss/global_step, cum_box_loss/global_step)+'='*40)
+
+                    if self.save:
+                        # for multi-gpu
+                        if isinstance(self.model, nn.DataParallel):
+                            best_state_dict = self.model.module.state_dict()
+                        else:
+                            best_state_dict = self.model.state_dict()
+
+                        torch.save(best_state_dict, best_path)
+                        os.chmod(best_path, self.access_mode)
+                        log.info(f"Saved weights to {best_path}")
                 
                 # break training if max steps reached (+1 to get max_step)
                 if global_step > self.max_steps or stop:
