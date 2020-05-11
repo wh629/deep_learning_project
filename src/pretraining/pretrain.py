@@ -238,7 +238,7 @@ def get_val_perms(loader, permutations, permutations_k):
     return batches, answers
 
 def pretrain(parser, batch_size=5, permutations_k=64):
-    max_grad_bound = 1
+    max_grad_bound = 0.1
 
     print('Start pre-training, batch_size = {}, permutations_k = {}'.format(batch_size, permutations_k))
     log.info('Start pre-training, batch_size = {}, permutations_k = {}'.format(batch_size, permutations_k))

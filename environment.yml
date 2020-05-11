@@ -3,8 +3,7 @@ channels:
   - pytorch
 dependencies:
   - python
-  - pytorch
-  - torchvision==0.4.2
+  - pytorch==1.5.0
   - numpy
   - scikit-learn
   - pandas
@@ -13,5 +12,6 @@ dependencies:
   - pip
   - pip:
     - shapely
-    - pillow==6.1
+    - pillow==7.0.0
+    - torchvision==0.5.0
     - tqdm
