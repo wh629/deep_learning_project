@@ -8,12 +8,12 @@ PROJECT=/scratch/wh629/dl/project          # project directory
 export DL_DATA_DIR=${PROJECT}/data         # data directory
 export DL_RESULTS_DIR=${PROJECT}/results   # results directory
 NETID=wh629                                # netid
-TRIALS=3                                   # number of experiment to run
+TRIALS=5                                   # number of experiment to run
 CAPACITY=1                                 # number of data batches a GPU can handle
-CHECK=500                                  # number of update iterations between evaluations
+CHECK=1000                                  # number of update iterations between evaluations
 LOG=100                                    # number of update iterations between logging information
-ROAD=0.00001                               # relative weight of road map loss
-BOX=1.0                                    # relative weight of box loss
+ROAD=1.0                                   # relative weight of road map loss
+BOX=640000.0                                    # relative weight of box loss
 PRETRAIN_WEIGHTS=''                        # absolute file name of preloaded weights with <path>\<filename>.pt
 
 python hyper_parameter_tuning.py \

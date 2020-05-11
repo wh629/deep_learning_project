@@ -7,7 +7,7 @@
 #SBATCH --time=48:00:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=wh629@nyu.edu
-#SBATCH --mem=32000
+#SBATCH --mem=64000
 #SBATCH --job-name=dl_pre
 #SBATCH --output=/scratch/wh629/dl/project/%j.out
 
@@ -19,7 +19,7 @@ module load gcc/6.3.0
 
 source activate DL
 
-EXPERIMENT=pretraining_3_lr0.01_5epochs
+EXPERIMENT=pretraining_3_lr0.01_5epochs_1log
 PROJECT=/scratch/wh629/dl/project           # set to your project directory
 export DL_DATA_DIR=${PROJECT}/data
 export DL_RESULTS_DIR=${PROJECT}/results
@@ -30,7 +30,7 @@ python ./src/pretraining/pretrain.py \
       --num_epochs 5 \
       --accum_grad 4 \
       --experiment ${EXPERIMENT} \
-      --log_steps 100 \
+      --log_steps 1 \
       --save_steps 500 \
       --patience 5 \
       --lr 0.01 \
