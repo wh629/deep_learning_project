@@ -23,10 +23,13 @@ The below are instructions to execute training and pretraining on NYU's Prince c
 
 3. Load modules to session using commands
 
-   ``module purge
-   module load anaconda3/5.3.1
-   module load cuda/10.0.130
-   module load gcc/6.3.0``
+   ``module purge``
+
+   ``module load anaconda3/5.3.1``
+
+   ``module load cuda/10.0.130``
+
+   ``module load gcc/6.3.0``
 
 4. Set up ``DL`` environment with ``.yml`` using command
 
