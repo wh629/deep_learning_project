@@ -106,9 +106,9 @@ class Model(nn.Module):
             self.backbone.load_state_dict(torch.load(backbone_weights))
             log.info(f"Preloaded weights from {backbone_weights}")
 
-        # gradient tracking for early layers
-        for param in self.backbone.parameters():
-            param.requires_grad = True
+        # # gradient tracking for early layers
+        # for param in self.backbone.parameters():
+        #     param.requires_grad = True
 
         # for road map
         self.double_dim_minus1 = nn.ConvTranspose2d(in_channels = 256, out_channels = 256, kernel_size = 3, stride = 2, padding = 1)
