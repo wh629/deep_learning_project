@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --partition=v100_sxm2_4,p40_4,p100_4,v100_pci_2
 #SBATCH --time=48:00:00
-#SBATCH --mem=32000
+#SBATCH --mem=64000
 #SBATCH --job-name=team12_pretrain
 
 module purge
