@@ -7,3 +7,6 @@ src/.idea/*
 experiment_scripts/submit_sbatch.sh
 
 *.out
+
+data/*
+restuls/*
