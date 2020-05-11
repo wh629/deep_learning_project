@@ -1,12 +1,12 @@
 """
-Module for argument parcer.
+Module for argument parser.
 """
 import argparse
 import os
 
 args = argparse.ArgumentParser(description='Deep Learning Competition')
 
-
+repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 args.add_argument('--experiment',
                   type=str,
@@ -14,7 +14,7 @@ args.add_argument('--experiment',
                   help='name of experiment')
 args.add_argument('--save_dir',
                   type=str, 
-                  default='results',
+                  default=os.getenv('DL_RESULTS_DIR', os.path.join(repo_dir, "results")),
                   help='directory to save results')
 args.add_argument('--seed',
                   type=int,
@@ -51,7 +51,7 @@ args.add_argument('--preload_weights',
 # =============================================================================
 args.add_argument('--data_dir',
                   type=str,
-                  default='data',
+                  default=os.getenv('DL_DATA_DIR', os.path.join(repo_dir, "data")),
                   help='directory storing all data')
 args.add_argument('--batch_size', 
                   type=int, 

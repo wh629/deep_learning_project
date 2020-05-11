@@ -383,7 +383,7 @@ def pretrain(parser, batch_size=5, permutations_k=64):
 
 
 def get_args():
-    repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     args = argparse.ArgumentParser(description='Pretraining')
 
