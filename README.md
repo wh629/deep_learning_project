@@ -49,7 +49,7 @@ The below are instructions to execute training and pretraining on NYU's Prince c
 
 # Execute Training
 
-1. In repository, execute training with command
+1. In repository, execute training with preloaded hyperparameters using command
 
    ``sbatch train.sbatch``
 
@@ -63,7 +63,7 @@ The below are instructions to execute training and pretraining on NYU's Prince c
 
 # Execute Pre-training
 
-1. In repository, execute pre-training with command
+1. In repository, execute pre-training with preloaded hyperparameters using command
 
    ``sbatch pretrain.sbatch``
 
