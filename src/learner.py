@@ -381,7 +381,7 @@ class Learner():
 
                     if val_road <= best_val_road and val_image <= best_val_image:
                         no_improve += 1
-                        log.info('='*40+f" No improvement counter {no_improve} our of {self.patience}"+'='*40)
+                        log.info('='*40+f" No improvement counter {no_improve} out of {self.patience}"+'='*40)
                         if no_improve >= self.patience:
                             log.info('='*40+' Early stopping at step {} '.format(global_step)+'='*40)
                             stop = True
