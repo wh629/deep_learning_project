@@ -43,6 +43,7 @@ def make_command(accumulate,
     command = (
         f'{os.path.join(repo_dir, "src", "main.py")} '
         f"--experiment {exp_name} "
+        f"--seed {seed} "
         f"--batch_size {bs_fill} "
         f"--accumulate_int {accumulation} "
         f"--learning_rate {lr} "
